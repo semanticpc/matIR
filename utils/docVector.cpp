@@ -7,12 +7,14 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 #include "indri/Parameters.hpp"
-#include "indri/Parameters.hpp"
 #include "indri/QueryEnvironment.hpp"
 #include "indri/QueryParserFactory.hpp"
 #include "matIR/ResultStats.hpp"
 #include "matIR/LanguageModel.hpp"
+#include "matIR/Preretrieval.hpp"
+#include "matIR/Postretrieval.hpp"
 #include <queue>
+
 
 struct query_t {
 
@@ -115,25 +117,67 @@ static void open_indexes(indri::api::QueryEnvironment& environment, indri::api::
         environment.setScoringRules(smoothingRules);
 }
 
-void printMatrix(std::queue< query_t* >& queries, indri::api::Parameters& param,
+
+void preretrievalFeatures(matIR::ResultStats& rs_stats, indri::api::QueryEnvironment& env,
+       indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
+
+
+    // Some simple features such as queryLength, average Token Length, etc
+    matIR::preretrieval::simple_features(rs_stats, features_scores);
+
+    // IDF Related Features
+    matIR::preretrieval::idfRelated(rs_stats, features_scores);
+
+    // cTF Related Features
+    matIR::preretrieval::ctfRelated(rs_stats, features_scores);
+
+    // Simplified Query Clarity
+    matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
+
+    // Collection Query Similarity
+    matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
+
+    // Point-wise Mutual Information
+    matIR::preretrieval::pmi(rs_stats, env, features_scores);
+
+    // Query Scope
+    //matIR::preretrieval::query_scope(rs_stats, env, features_scores);
+    //matIR::preretrieval::idfRelated(rs_stats, features_scores);
+
+
+}
+
+
+void postretrievalFeatures(matIR::ResultStats& rs_stats,
+        indri::api::QueryEnvironment& env,
+        indri::api::Parameters& param,
+        indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
+        int termLimit = 10;
+        std::string rmSmoothing = "";
+        matIR::LanguageModel lm(rmSmoothing, termLimit, rs_stats);
+        //lm.generateRelevanceModel();
+
+        matIR::postretrieval::query_clarity(lm, env, features_scores);
+        //matIR::postretrieval::query_feedback(lm, env, features_scores);
+        //matIR::postretrieval::NQC(rs_stats, features_scores);
+        //matIR::postretrieval::retScore_related(rs_stats, features_scores);
+        //matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
+
+}
+
+void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& param,
         indri::api::QueryEnvironment& env) {
 
     int documents = (int) param[ "documents" ];
-    int termLimit = (int) param[ "termLimit" ];
+    int termLimit = 10;//(int) param[ "termLimit" ];
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
     matIR::ResultStats stats(env, documents);
 
-
+    bool header = true;
     while (queries.size() > 0) {
         query_t* q = queries.front();
-
-        // Print the Query Number and Query Text
-        //cout << q->number + " " + q->text << endl;
-
-
-        // Initialize the statistics for the query
-
+        // Initialize Statistics for the current query
         if(q->workingSet.size() > 0){
             std::vector<lemur::api::DOCID_T> docids;
             docids = env.documentIDsFromMetadata("docno", q->workingSet);
@@ -141,6 +185,7 @@ void printMatrix(std::queue< query_t* >& queries, indri::api::Parameters& param,
         }else{
             stats.init(q->text);
         }
+
         arma::mat tfidf = stats.getTFIDFMatrix();
 
         const std::vector<lemur::api::DOCID_T>& docIDs = stats.getDocumentIDs();
@@ -155,7 +200,6 @@ void printMatrix(std::queue< query_t* >& queries, indri::api::Parameters& param,
             cout << " #" << extDocIDs[row];
             cout << endl;
         }
-        // Generate the Term Frequency Matrix for the retrieved documents
 
         queries.pop();
     }
@@ -165,18 +209,14 @@ void printMatrix(std::queue< query_t* >& queries, indri::api::Parameters& param,
 static void usage(indri::api::Parameters param) {
     if (!param.exists("query") || !(param.exists("index") ||
             param.exists("server")) || !param.exists("documents")) {
-        std::cerr << "rmodel usage: " << std::endl
-                << "   rmodel -query=myquery -index=myindex -documents=10 -termLimit=10 -maxGrams=2" << std::endl
+        std::cerr << "featureVector usage: " << std::endl
+                << "   featureVector -query=myquery -index=myindex -documents=10 -maxGrams=2" << std::endl
                 << "     myquery: a valid Indri query (be sure to use quotes around it if there are spaces in it)" << std::endl
                 << "     myindex: a valid Indri index" << std::endl
                 << "     documents: the number of documents to use to build the language model" << std::endl
                 << "     termLimit: the number of terms in the language model to  output" << std::endl
                 << "     maxGrams (optional): maximum length (in words) of phrases to be added to the model, default is 1 (unigram)" << std::endl;
         exit(-1);
-    }
-    if (!param.exists("termLimit")) {
-        // Default to 10 terms to output
-        param.set("termLimit", 10);
     }
 }
 
@@ -211,7 +251,7 @@ int main(int argc, char * argv[]) {
         indri::api::QueryEnvironment environment;
         open_indexes(environment, param);
 
-        printMatrix(queries, param, environment);
+        generateFeatures(queries, param, environment);
     } catch (lemur::api::Exception& e) {
         LEMUR_ABORT(e);
     } catch (...) {
@@ -219,4 +259,34 @@ int main(int argc, char * argv[]) {
         return -1;
     }
     return 0;
-}// </editor-fold>
+}
+
+
+
+
+void printMatrix(std::queue< query_t* >& queries, indri::api::Parameters& param,
+        indri::api::QueryEnvironment& env) {
+
+    int documents = (int) param[ "documents" ];
+    int termLimit = (int) param[ "termLimit" ];
+
+    std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
+    matIR::ResultStats stats(env, documents);
+
+
+    while (queries.size() > 0) {
+        query_t* q = queries.front();
+
+        // Print the Query Number and Query Text
+        //cout << q->number + " " + q->text << endl;
+
+
+        // Initialize the statistics for the query
+
+
+        // Generate the Term Frequency Matrix for the retrieved documents
+
+        queries.pop();
+    }
+
+}
