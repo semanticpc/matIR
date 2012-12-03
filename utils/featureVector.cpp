@@ -11,6 +11,7 @@
 #include "matIR/ResultStats.hpp"
 #include "matIR/LanguageModel.hpp"
 #include "matIR/Preretrieval.hpp"
+#include "matIR/Postretrieval.hpp"
 #include <queue>
 
 
@@ -116,7 +117,7 @@ static void open_indexes(indri::api::QueryEnvironment& environment, indri::api::
 }
 
 
-void pretretrievalFeatures(matIR::ResultStats& rs_stats,
+void preretrievalFeatures(matIR::ResultStats& rs_stats, indri::api::QueryEnvironment& env,
        indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
 
 
@@ -126,12 +127,40 @@ void pretretrievalFeatures(matIR::ResultStats& rs_stats,
     // IDF Related Features
     matIR::preretrieval::idfRelated(rs_stats, features_scores);
 
+    // cTF Related Features
+    matIR::preretrieval::ctfRelated(rs_stats, features_scores);
+
     // Simplified Query Clarity
     matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
 
+    // Collection Query Similarity
+    matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
 
+    // Point-wise Mutual Information
+    matIR::preretrieval::pmi(rs_stats, env, features_scores);
+
+    // Query Scope
+    //matIR::preretrieval::query_scope(rs_stats, env, features_scores);
     //matIR::preretrieval::idfRelated(rs_stats, features_scores);
-    //matIR::preretrieval::idfRelated();
+
+
+}
+
+
+void postretrievalFeatures(matIR::ResultStats& rs_stats,
+        indri::api::QueryEnvironment& env,
+        indri::api::Parameters& param,
+        indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
+        int termLimit = 10;
+        std::string rmSmoothing = "";
+        matIR::LanguageModel lm(rmSmoothing, termLimit, rs_stats);
+        //lm.generateRelevanceModel();
+
+        matIR::postretrieval::query_clarity(lm, env, features_scores);
+        matIR::postretrieval::query_feedback(lm, env, features_scores);
+        matIR::postretrieval::NQC(rs_stats, features_scores);
+        matIR::postretrieval::retScore_related(rs_stats, features_scores);
+        matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
 
 }
 
@@ -154,15 +183,15 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
 
         // Build the Language Model from the top retrieved document or
         //   using the specified documents
-        matIR::LanguageModel lm(rmSmoothing, termLimit, stats);
-        lm.generateRelevanceModel();
+
 
         //indri::utility::greedy_vector< std::pair< string, double > > model = lm.getScoredTerms();
         indri::utility::greedy_vector< std::pair< string, double > > features_scores;
 
         // Generate Pre-retrieval features
-        pretretrievalFeatures(stats, features_scores);
+        preretrievalFeatures(stats, env,  features_scores);
 
+        postretrievalFeatures(stats, env, param, features_scores);
 
         // Generate Post-retrieval features
         // Generate Document features

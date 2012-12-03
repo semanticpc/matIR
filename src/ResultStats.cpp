@@ -260,18 +260,19 @@ void matIR::ResultStats::sortGrams(){
 void matIR::ResultStats::_setQueryStatistics(const std::string& query){
         // Update query statistics
         _queryStatistics.init(query, _environment);
-        std::map<string, int> queryTerms = _queryStatistics.getQueryText();
+        std::map<string, int> queryTokens = _queryStatistics.getQueryTokens();
         // Temporary hack
-        arma::uvec indices(queryTerms.size());
+        arma::uvec indices(queryTokens.size());
         GramCounts* newCounts = new GramCounts;
 
         int i = 0;
         map<string, int>::const_iterator iter;
-        for (iter=queryTerms.begin(); iter != queryTerms.end(); ++iter) {
+        for (iter=queryTokens.begin(); iter != queryTokens.end(); ++iter) {
             newCounts->gram.term = iter->first;
             indices(i) = (*_gramTable.find( &newCounts->gram))->gram.internal_termID;
             ++i;
         }
+        _queryStatistics.setTermIDs(indices);
 }
     //
     // generate

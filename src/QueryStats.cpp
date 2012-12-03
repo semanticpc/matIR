@@ -18,42 +18,40 @@ void matIR::QueryStats::init(const std::string& query, indri::api::QueryEnvironm
     rootNode->walk(extractor);
     std::vector<indri::lang::RawScorerNode*>& scorerNodes = extractor.getScorerNodes();
 
-    queryLength = 0;
     for (int i = 0; i < scorerNodes.size(); i++){
         std::string qterm = scorerNodes[i]->queryText();
-        queryLength += 1;
-        if( _queryText.find(qterm) == _queryText.end() )
-            _queryText.insert(make_pair( qterm, 1));
+        queryString.push_back(qterm);
+        if( _queryTokens.find(qterm) == _queryTokens.end() )
+            _queryTokens.insert(make_pair( qterm, 1));
         else
-            _queryText[qterm] += 1;
+            _queryTokens[qterm] += 1;
     }
 
     // Initialize vectors
 
 
-    _query_collectionFrequency.set_size(_queryText.size());
-    _query_documentFrequency.set_size(_queryText.size());
+    _query_collectionFrequency.set_size(_queryTokens.size());
+    _query_documentFrequency.set_size(_queryTokens.size());
 
 
 
     // Now obtain the statistics
     int i = 0;
     map<std::string, int>::const_iterator iter;
-    for (iter=_queryText.begin(); iter != _queryText.end(); ++iter) {
+    for (iter=_queryTokens.begin(); iter != _queryTokens.end(); ++iter) {
         std::string stem = environment.stemTerm(iter->first);
         _query_collectionFrequency(i) = (double) environment.stemCount(stem);
         _query_documentFrequency(i) = (double) environment.documentStemCount(stem);
         ++i;
 
     }
-
 }
 
 const arma::uvec matIR::QueryStats::getQueryTermIds() {
     return _query_matrix_indices;
 }
-const std::map<string, int> matIR::QueryStats::getQueryText() {
-    return _queryText;
+const std::map<string, int> matIR::QueryStats::getQueryTokens() {
+    return _queryTokens;
 }
 const arma::vec matIR::QueryStats::getQueryDFs() {
     return _query_documentFrequency;
@@ -69,10 +67,10 @@ void matIR::QueryStats::setTermIDs(arma::uvec indices) {
 
 
 arma::vec matIR::QueryStats::getTermFreqInQuery() {
-    arma::vec termFreqInQuery(_queryText.size());
+    arma::vec termFreqInQuery(_queryTokens.size());
     int i = 0;
     map<std::string, int>::const_iterator iter;
-    for (iter=_queryText.begin(); iter != _queryText.end(); ++iter)
+    for (iter=_queryTokens.begin(); iter != _queryTokens.end(); ++iter)
         termFreqInQuery(i++) = iter->second;
     return termFreqInQuery;
 }

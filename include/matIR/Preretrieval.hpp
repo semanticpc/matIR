@@ -30,6 +30,17 @@ namespace matIR {
         void simple_features( ResultStats& stats ,
             indri::utility::greedy_vector< std::pair< string, double > >& feature_scores);
 
+        void query_scope( ResultStats& stats , indri::api::QueryEnvironment& env,
+            indri::utility::greedy_vector< std::pair< string, double > >& feature_scores);
+
+
+        void pmi( ResultStats& stats , indri::api::QueryEnvironment& env,
+            indri::utility::greedy_vector< std::pair< string, double > >& feature_scores);
+
+
+        void collection_query_similarity( ResultStats& stats ,
+            indri::utility::greedy_vector< std::pair< string, double > >& feature_scores);
+
     }
 }
 

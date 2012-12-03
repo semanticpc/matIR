@@ -21,27 +21,28 @@
 namespace matIR {
     class LanguageModel {
     public:
-        
-        
-        
+
+
+
 	private:
     	int _termLimit;
-    	const std::string& _smoothing;
+    	std::string _smoothing;
     	matIR::ResultStats& _stats;
-        
+
     	matIR::scoring::TermScoreFunction* _termScorer;
     	indri::utility::greedy_vector< std::pair< string, double > > _scoredTerms;
-        
+
     public:
         LanguageModel(  const std::string& smoothing,
                       int termLimit,
                       matIR::ResultStats& stats);
         ~LanguageModel();
-        
+
         void generateRelevanceModel();
         void generateLanguageModel();
+        void setSmoothing(const std::string& smoothing);
         const indri::utility::greedy_vector< std::pair< string, double > > getScoredTerms();
-        
+
     };
 }
 

@@ -24,7 +24,7 @@ void matIR::preretrieval::idfRelated( ResultStats& stats ,
     feature_scores.push_back(std::make_pair("idfVar", arma::var(idf)));
     feature_scores.push_back(std::make_pair("idfMax", arma::max(idf)));
 
-    feature_scores.push_back(std::make_pair("idfMaxMinRatio", arma::max(idf)));
+    feature_scores.push_back(std::make_pair("idfMaxMinRatio", arma::min(idf)/arma::max(idf)));
     return;
 }
 
@@ -33,16 +33,40 @@ void matIR::preretrieval::ctfRelated( ResultStats& stats ,
         indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
 
     // Compute IDF from qstats
-    arma::vec collTermFreq = ( /
-                                                stats.collectionLength);
-
-
-    double score = arma::log(stats.collectionLength /
+    arma::vec ictf = arma::log(stats.collectionLength /
                                 stats.getQueryStats().getQuerycTFs());
 
-    feature_scores.push_back(std::make_pair("ictfAve", arma::mean(score)));
-    feature_scores.push_back(std::make_pair("ictfMax", arma::max(score)));
-    feature_scores.push_back(std::make_pair("ictfVar", arma::var(score)));
+    feature_scores.push_back(std::make_pair("ictfAve", arma::mean(ictf)));
+    feature_scores.push_back(std::make_pair("ictfMax", arma::max(ictf)));
+    feature_scores.push_back(std::make_pair("ictfVar", arma::var(ictf)));
+    return;
+}
+
+
+void matIR::preretrieval::query_scope( ResultStats& stats ,indri::api::QueryEnvironment& env,
+        indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
+
+    // Query Scope
+
+    // Make an Boolean OR query and obtain the number of documents containing
+    //   the query expression
+    std::map<string, int> queryTokens = stats.getQueryStats().getQueryTokens();
+
+    // Average Query Length
+    std:string queryExpression = " #combine(";
+    int i = 0;
+    map<std::string, int>::const_iterator iter;
+    for (iter=queryTokens.begin(); iter != queryTokens.end(); ++iter){
+        queryExpression = queryExpression + " #1( " + iter->first + ") " ;
+        //break;
+    }
+    queryExpression += " )";
+    cout << queryExpression << endl;
+
+    double nq = env.expressionCount(queryExpression);
+    double queryScore = -1 * log(nq / stats.documentCount);
+
+    feature_scores.push_back(std::make_pair("queryScope", queryScore));
     return;
 }
 
@@ -52,7 +76,7 @@ void matIR::preretrieval::simplified_query_clarity( ResultStats& stats ,
 
     // Get Probability( term | Query) --> Pml
     arma::vec pQueryLang = (stats.getQueryStats().getTermFreqInQuery() /
-                                                stats.getQueryStats().queryLength);
+                                        stats.getQueryStats().queryString.size());
 
     arma::vec pCollLang = (stats.getQueryStats().getQuerycTFs() /
                                                 stats.collectionLength);
@@ -67,13 +91,13 @@ void matIR::preretrieval::simple_features( ResultStats& stats ,
         indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
 
 
-    std::map<string, int> queryText = stats.getQueryStats().getQueryText();
+    std::map<string, int> queryTokens = stats.getQueryStats().getQueryTokens();
 
     // Average Query Length
-    arma::vec tokenLength(queryText.size());
+    arma::vec tokenLength(queryTokens.size());
     int i = 0;
     map<std::string, int>::const_iterator iter;
-    for (iter=queryText.begin(); iter != queryText.end(); ++iter)
+    for (iter=queryTokens.begin(); iter != queryTokens.end(); ++iter)
         tokenLength(i++) = (iter->first).length();
 
     tokenLength = tokenLength * stats.getQueryStats().getTermFreqInQuery();
@@ -81,11 +105,61 @@ void matIR::preretrieval::simple_features( ResultStats& stats ,
                                                         arma::mean(tokenLength)));
 
     feature_scores.push_back(std::make_pair("tokenCount",
-                                                stats.getQueryStats().queryLength));
+                                                stats.getQueryStats().queryString.size()));
 
-    feature_scores.push_back(std::make_pair("uniqueTokenCount", queryText.size()));
+    feature_scores.push_back(std::make_pair("uniqueTokenCount", queryTokens.size()));
 
 
     return;
 }
 
+
+
+void matIR::preretrieval::collection_query_similarity( ResultStats& stats ,
+        indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
+
+
+    arma::vec idf = arma::log(stats.documentCount / stats.getQueryStats().getQueryDFs());
+
+    arma::vec SCQ = (stats.getQueryStats().getQuerycTFs() + 1) * idf;
+
+    feature_scores.push_back(std::make_pair("SCQAvg", arma::mean(SCQ)));
+    feature_scores.push_back(std::make_pair("SCQSum", arma::sum(SCQ)));
+    feature_scores.push_back(std::make_pair("SCQMax", arma::max(SCQ)));
+    return;
+}
+
+
+void matIR::preretrieval::pmi( ResultStats& stats , indri::api::QueryEnvironment& env,
+        indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
+
+// Query Scope
+
+    // Make an Boolean OR query and obtain the number of documents containing
+    //   the query expression
+    std::vector<string> queryString = stats.getQueryStats().queryString;
+    arma::vec query_ctf = stats.getQueryStats().getQuerycTFs();
+
+    if(queryString.size() == 1){
+        feature_scores.push_back(std::make_pair("PMI", 0));
+        return;
+    }
+
+
+    // Average Query Length
+    double pmi_score = 0;
+
+    for(int i =0; (i + 1) < queryString.size(); i++){
+        std:string queryExpression = " #1( " + queryString[i] + " " +
+                                        queryString[i + 1] + " )";
+        
+        double p_t1_t2_D = env.expressionCount(queryExpression) / stats.collectionLength;
+        double p_t1_D = query_ctf[i] / stats.collectionLength;
+        double p_t2_D = query_ctf[i+1] / stats.collectionLength;
+        pmi_score += (p_t1_t2_D / (p_t1_D * p_t2_D));
+    }
+
+    feature_scores.push_back(std::make_pair("PMI", pmi_score));
+
+    return;
+}

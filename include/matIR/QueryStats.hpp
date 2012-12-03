@@ -47,9 +47,9 @@ namespace matIR {
 
     class QueryStats {
     public:
-        int queryLength;
+        std::vector<string> queryString;
     private:
-        std::map<string, int> _queryText;
+        std::map<string, int> _queryTokens;
 
         // Internal term ID of the query
         arma::uvec _query_matrix_indices;
@@ -63,13 +63,13 @@ namespace matIR {
         //~QueryStats();
 
 
-        void init(const std::string& query, indri::api::QueryEnvironment& environment);
+        void init(const std::string& , indri::api::QueryEnvironment&);
         const arma::vec getQueryDFs();
         const arma::vec getQuerycTFs();
         const arma::uvec getQueryTermIds();
-        const std::map<std::string, int> getQueryText();
+        const std::map<std::string, int> getQueryTokens();
         arma::vec getTermFreqInQuery();
-        void setTermIDs(arma::uvec indices);
+        void setTermIDs(arma::uvec);
 
     };
 
