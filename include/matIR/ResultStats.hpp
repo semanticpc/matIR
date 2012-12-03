@@ -126,11 +126,12 @@ public:
 
 	void init( const std::string& query );
 	// generate from an existing result set
-	void init( const std::string &query , const std::vector<indri::api::ScoredExtentResult>& results );
+	void init( const std::string &query , const std::vector<lemur::api::DOCID_T>& docids );
 	const std::vector<indri::api::ScoredExtentResult>& getQueryResults() const;
         matIR::QueryStats& getQueryStats();
 	arma::mat getTFIDFMatrix();
 	void sortGrams();
+        const std::vector<lemur::api::DOCID_T>& getDocumentIDs() const;
 	const arma::mat& getTFMatrix() const;
 };
 }

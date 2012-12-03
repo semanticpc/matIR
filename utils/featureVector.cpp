@@ -157,10 +157,10 @@ void postretrievalFeatures(matIR::ResultStats& rs_stats,
         //lm.generateRelevanceModel();
 
         matIR::postretrieval::query_clarity(lm, env, features_scores);
-        matIR::postretrieval::query_feedback(lm, env, features_scores);
-        matIR::postretrieval::NQC(rs_stats, features_scores);
-        matIR::postretrieval::retScore_related(rs_stats, features_scores);
-        matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
+        //matIR::postretrieval::query_feedback(lm, env, features_scores);
+        //matIR::postretrieval::NQC(rs_stats, features_scores);
+        //matIR::postretrieval::retScore_related(rs_stats, features_scores);
+        //matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
 
 }
 
@@ -177,19 +177,20 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
     while (queries.size() > 0) {
         query_t* q = queries.front();
         // Initialize Statistics for the current query
-
-        //cout << "Query : " << q->text << endl;
-        stats.init(q->text);
-
-        // Build the Language Model from the top retrieved document or
-        //   using the specified documents
+        if(q->workingSet.size() > 0){
+            std::vector<lemur::api::DOCID_T> docids;
+            docids = env.documentIDsFromMetadata("docno", q->workingSet);
+            stats.init(q->text, docids);
+        }else{
+            stats.init(q->text);
+        }
 
 
         //indri::utility::greedy_vector< std::pair< string, double > > model = lm.getScoredTerms();
         indri::utility::greedy_vector< std::pair< string, double > > features_scores;
 
         // Generate Pre-retrieval features
-        preretrievalFeatures(stats, env,  features_scores);
+        //preretrievalFeatures(stats, env,  features_scores);
 
         postretrievalFeatures(stats, env, param, features_scores);
 

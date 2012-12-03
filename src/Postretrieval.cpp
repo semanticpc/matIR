@@ -17,19 +17,24 @@ void matIR::postretrieval::query_clarity( matIR::LanguageModel& lm_model,
         indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
 
     double clarityScore = 0;
+    lm_model.setSmoothing("method:jm,lambda,0.5");
     lm_model.generateRelevanceModel();
     indri::utility::greedy_vector< std::pair< string, double > > terms = lm_model.getScoredTerms();
-    int count = 0;
     double sum=0, ln_Pr=0;
     for( size_t j=0; j < terms.size(); j++ ) {
         std::string t = terms[j].first;
-        count++;
+
         // query-clarity = SUM_w{P(w|Q)*log(P(w|Q)/P(w))}
         // P(w)=cf(w)/|C|
         // the relevance model uses stemmed terms, so use stemCount
         double pw = ((double)env.stemCount(t)/(double)env.termCount());
         // P(w|Q) is a prob computed by any model, e.g. relevance models
         double pwq = terms[j].second;
+            std::cout << t << " "
+              << (terms[j].second*log(terms[j].second/
+    // the relevance model uses stemmed terms, so use stemCount
+                            ((double)env.stemCount(t)/
+                             (double)env.termCount())))/log(2.0) << " " << terms[j].second << std::endl;
         sum += pwq;
         clarityScore += (pwq)*log(pwq/pw);
     }
@@ -108,7 +113,6 @@ void matIR::postretrieval::query_feedback( matIR::LanguageModel& lm_model,
     double sum=0, ln_Pr=0;
     for( size_t j=0; j < terms.size(); j++ ) {
         std::string t = terms[j].first;
-        cout << t << endl;
     }
 
 

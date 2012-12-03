@@ -205,9 +205,8 @@ void matIR::ResultStats::_buildStats() {
 
 arma::mat matIR::ResultStats::getTFIDFMatrix() {
 	arma::mat tfidfMat = tfMat;
-        //dfVector(vocabIndexCounter) = log( ( documentCount - documentOccurrences + 0.5 )
-        //	/ ( documentOccurrences + 0.5 ) );;
-	tfidfMat.each_row() %= dfVector;
+        arma::vec idf = arma::log((documentCount - dfVector + 0.5) / (dfVector + 0.5));
+	tfidfMat.each_row() %= idf;
 	return tfidfMat;
 }
 
@@ -304,9 +303,9 @@ void matIR::ResultStats::init( const std::string& query ) {
     // generate
     //
 
-void matIR::ResultStats::init( const std::string& query, const std::vector<indri::api::ScoredExtentResult>& results  ) {
+void matIR::ResultStats::init( const std::string& query, const std::vector<lemur::api::DOCID_T>& documentSet  ) {
     try {
-        _results = results;
+        _results = _environment.runQuery( query, documentSet, documentSet.size());
         _logtoposterior(_results);
         _extractDocuments();
         _vectors = _environment.documentVectors( _documentIDs );
@@ -319,5 +318,9 @@ void matIR::ResultStats::init( const std::string& query, const std::vector<indri
     } catch( lemur::api::Exception& e ) {
         LEMUR_RETHROW( e, "Couldn't generate relevance model for '" + query + "' because: " );
     }
+}
+
+const std::vector<lemur::api::DOCID_T>& matIR::ResultStats::getDocumentIDs() const{
+    return _documentIDs;
 }
 
