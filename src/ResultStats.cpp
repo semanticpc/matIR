@@ -180,7 +180,7 @@ void matIR::ResultStats::_buildStats() {
 	for( iter = _gramTable.begin(); iter != _gramTable.end(); iter++ ) {
 		double gramCount = 0;
 		++tmpTermID;
-    	Gram* gram = *iter->first;
+                Gram* gram = *iter->first;
    		GramCounts* gramCounts = *iter->second;
    		gram->internal_termID = tmpTermID;
 
@@ -268,7 +268,18 @@ void matIR::ResultStats::_setQueryStatistics(const std::string& query){
         map<string, int>::const_iterator iter;
         for (iter=queryTokens.begin(); iter != queryTokens.end(); ++iter) {
             newCounts->gram.term = iter->first;
-            indices(i) = (*_gramTable.find( &newCounts->gram))->gram.internal_termID;
+
+            GramCounts** gramCounts = _gramTable.find( &newCounts->gram );
+
+            if( gramCounts == 0 ) {
+
+                newCounts->gram.internal_termID = tfMat.size() + 1;
+                _gramTable.insert( &newCounts->gram, newCounts );
+                gramCounts = &newCounts;
+                // Add Dummy Column to the tfMatrix
+                tfMat.insert_cols(tfMat.size(), 1);
+            }
+            indices(i) = (*gramCounts)->gram.internal_termID;
             ++i;
         }
         _queryStatistics.setTermIDs(indices);
@@ -311,6 +322,8 @@ void matIR::ResultStats::init( const std::string& query, const std::vector<lemur
         _vectors = _environment.documentVectors( _documentIDs );
         _countGrams();
         _buildStats();
+
+        _setQueryStatistics(query);
         for (unsigned int i = 0; i < _vectors.size(); i++)
             delete _vectors[i];
 

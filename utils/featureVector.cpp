@@ -122,26 +122,26 @@ void preretrievalFeatures(matIR::ResultStats& rs_stats, indri::api::QueryEnviron
 
 
     // Some simple features such as queryLength, average Token Length, etc
-    matIR::preretrieval::simple_features(rs_stats, features_scores);
+    //matIR::preretrieval::simple_features(rs_stats, features_scores);
 
     // IDF Related Features
-    matIR::preretrieval::idfRelated(rs_stats, features_scores);
+    //matIR::preretrieval::idfRelated(rs_stats, features_scores);
 
     // cTF Related Features
-    matIR::preretrieval::ctfRelated(rs_stats, features_scores);
+    //matIR::preretrieval::ctfRelated(rs_stats, features_scores);
 
     // Simplified Query Clarity
-    matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
+    //matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
 
     // Collection Query Similarity
-    matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
+    //matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
 
     // Point-wise Mutual Information
     matIR::preretrieval::pmi(rs_stats, env, features_scores);
 
     // Query Scope
     //matIR::preretrieval::query_scope(rs_stats, env, features_scores);
-    //matIR::preretrieval::idfRelated(rs_stats, features_scores);
+
 
 
 }
@@ -172,8 +172,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
     matIR::ResultStats stats(env, documents);
-
-    bool header = true;
+    ;
     while (queries.size() > 0) {
         query_t* q = queries.front();
         // Initialize Statistics for the current query
@@ -190,14 +189,15 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         indri::utility::greedy_vector< std::pair< string, double > > features_scores;
 
         // Generate Pre-retrieval features
-        //preretrievalFeatures(stats, env,  features_scores);
+        preretrievalFeatures(stats, env,  features_scores);
 
-        postretrievalFeatures(stats, env, param, features_scores);
+        //postretrievalFeatures(stats, env, param, features_scores);
 
         // Generate Post-retrieval features
         // Generate Document features
 
         // Print query related features
+        bool header = true;
         if(header){
             header = false;
             cout << "topic";
