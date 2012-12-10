@@ -208,7 +208,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         cout << q->number;
         for(int i=0;i < features_scores.size(); i++)
             cout <<  "," <<  features_scores[i].second;
-
+        cout << endl;
         queries.pop();
     }
 
