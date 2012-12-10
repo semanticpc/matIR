@@ -155,9 +155,9 @@ void matIR::preretrieval::pmi( ResultStats& stats , indri::api::QueryEnvironment
         std:string queryExpression = " #1( " + queryString[i] + " " +
                                         queryString[i + 1] + " )";
 
-        double p_t1_t2_D = env.expressionCount(queryExpression) / stats.collectionLength;
-        double p_t1_D = query_ctf[i] / stats.collectionLength;
-        double p_t2_D = query_ctf[i+1] / stats.collectionLength;
+        double p_t1_t2_D = env.expressionCount(queryExpression) / (double) stats.collectionLength;
+        double p_t1_D = env.stemCount(queryString[i]) / (double) stats.collectionLength;
+        double p_t2_D = env.stemCount(queryString[i + 1])/ (double)  stats.collectionLength;
         if(p_t1_D == 0 || p_t2_D == 0 || p_t1_t2_D  == 0 )
             pmi_score(i) = 0;
         else
