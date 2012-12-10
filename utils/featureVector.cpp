@@ -172,7 +172,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
 
-
+    bool header = true;
     while (queries.size() > 0) {
         matIR::ResultStats stats(env, documents);
         query_t* q = queries.front();
@@ -197,7 +197,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         // Generate Document features
 
         // Print query related features
-        bool header = true;
+
         if(header){
             header = false;
             cout << "topic";
@@ -208,7 +208,6 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         cout << q->number;
         for(int i=0;i < features_scores.size(); i++)
             cout <<  "," <<  features_scores[i].second;
-        cout << endl;
 
         queries.pop();
     }

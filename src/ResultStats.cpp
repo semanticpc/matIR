@@ -276,9 +276,11 @@ void matIR::ResultStats::_setQueryStatistics(const std::string& query){
                 _gramTable.insert( &newCounts->gram, newCounts );
                 gramCounts = &newCounts;
                 // Add Dummy Column to the tfMatrix
-                tfMat.insert_cols(tfMat.size(), 1);
-            }
+                indices(i) = -1;
+
+            }else{
             indices(i) = (*gramCounts)->gram.internal_termID;
+            }
             ++i;
         }
         _queryStatistics.setTermIDs(indices);
