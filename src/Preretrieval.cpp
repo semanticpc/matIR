@@ -9,7 +9,7 @@
 #include "matIR/ResultStats.hpp"
 #include "matIR/Preretrieval.hpp"
 #include "indri/greedy_vector"
-
+#include <math.h>
 #include <queue>
 
 void matIR::preretrieval::idfRelated( ResultStats& stats ,
@@ -158,10 +158,10 @@ void matIR::preretrieval::pmi( ResultStats& stats , indri::api::QueryEnvironment
         double p_t1_t2_D = env.expressionCount(queryExpression) / stats.collectionLength;
         double p_t1_D = query_ctf[i] / stats.collectionLength;
         double p_t2_D = query_ctf[i+1] / stats.collectionLength;
-        if(p_t1_D == 0 || p_t2_D == 0)
+        if(p_t1_D == 0 || p_t2_D == 0 || p_t1_t2_D  == 0 )
             pmi_score(i) = 0;
         else
-            pmi_score(i) = (p_t1_t2_D / (p_t1_D * p_t2_D));
+            pmi_score(i) = log(p_t1_t2_D / (p_t1_D * p_t2_D));
     }
 
     feature_scores.push_back(std::make_pair("avgPMI", arma::mean(pmi_score)));

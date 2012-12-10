@@ -21,6 +21,8 @@ void matIR::QueryStats::init(const std::string& query, indri::api::QueryEnvironm
     for (int i = 0; i < scorerNodes.size(); i++){
         std::string qterm = environment.stemTerm(scorerNodes[i]->queryText());
         queryString.push_back(qterm);
+        if(environment.stemCount(qterm) == 0)
+            continue;
         if( _queryTokens.find(qterm) == _queryTokens.end() )
             _queryTokens.insert(make_pair( qterm, 1));
         else
