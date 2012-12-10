@@ -122,19 +122,19 @@ void preretrievalFeatures(matIR::ResultStats& rs_stats, indri::api::QueryEnviron
 
 
     // Some simple features such as queryLength, average Token Length, etc
-    //matIR::preretrieval::simple_features(rs_stats, features_scores);
+    matIR::preretrieval::simple_features(rs_stats, features_scores);
 
     // IDF Related Features
-    //matIR::preretrieval::idfRelated(rs_stats, features_scores);
+    matIR::preretrieval::idfRelated(rs_stats, features_scores);
 
     // cTF Related Features
-    //matIR::preretrieval::ctfRelated(rs_stats, features_scores);
+    matIR::preretrieval::ctfRelated(rs_stats, features_scores);
 
     // Simplified Query Clarity
-    //matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
+    matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
 
     // Collection Query Similarity
-    //matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
+    matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
 
     // Point-wise Mutual Information
     matIR::preretrieval::pmi(rs_stats, env, features_scores);
@@ -171,9 +171,10 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
     int termLimit = 10;//(int) param[ "termLimit" ];
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
-    matIR::ResultStats stats(env, documents);
-    ;
+
+
     while (queries.size() > 0) {
+        matIR::ResultStats stats(env, documents);
         query_t* q = queries.front();
         // Initialize Statistics for the current query
         if(q->workingSet.size() > 0){
@@ -183,7 +184,6 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         }else{
             stats.init(q->text);
         }
-
 
         //indri::utility::greedy_vector< std::pair< string, double > > model = lm.getScoredTerms();
         indri::utility::greedy_vector< std::pair< string, double > > features_scores;

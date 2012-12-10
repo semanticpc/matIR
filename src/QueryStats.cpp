@@ -19,7 +19,7 @@ void matIR::QueryStats::init(const std::string& query, indri::api::QueryEnvironm
     std::vector<indri::lang::RawScorerNode*>& scorerNodes = extractor.getScorerNodes();
 
     for (int i = 0; i < scorerNodes.size(); i++){
-        std::string qterm = scorerNodes[i]->queryText();
+        std::string qterm = environment.stemTerm(scorerNodes[i]->queryText());
         queryString.push_back(qterm);
         if( _queryTokens.find(qterm) == _queryTokens.end() )
             _queryTokens.insert(make_pair( qterm, 1));

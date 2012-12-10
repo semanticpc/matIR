@@ -97,6 +97,8 @@ bool isValidWord(const string & word)
 
 
 void matIR::ResultStats::_countGrams() {
+    docLength.reset();
+    docScores.reset();
     docLength.set_size(_results.size());
     docScores.set_size(_results.size());
         // for each query result
@@ -154,8 +156,7 @@ void matIR::ResultStats::_countGrams() {
             }
 
         }
-
-            // Store the values
+        // Store the values
         docScores(i) = _results[i].score;
         docLength(i) = _environment.documentLength(_results[i].document);
 
@@ -268,11 +269,9 @@ void matIR::ResultStats::_setQueryStatistics(const std::string& query){
         map<string, int>::const_iterator iter;
         for (iter=queryTokens.begin(); iter != queryTokens.end(); ++iter) {
             newCounts->gram.term = iter->first;
-
             GramCounts** gramCounts = _gramTable.find( &newCounts->gram );
 
             if( gramCounts == 0 ) {
-
                 newCounts->gram.internal_termID = tfMat.size() + 1;
                 _gramTable.insert( &newCounts->gram, newCounts );
                 gramCounts = &newCounts;
@@ -291,16 +290,15 @@ void matIR::ResultStats::_setQueryStatistics(const std::string& query){
 void matIR::ResultStats::init( const std::string& query ) {
     try {
 
-            // run the query, get the document vectors
+        // run the query, get the document vectors
         _results = _environment.runQuery( query, _documents );
         _logtoposterior(_results);
         _extractDocuments();
+
         _vectors = _environment.documentVectors( _documentIDs );
         _countGrams();
         _buildStats();
-
         _setQueryStatistics(query);
-
         for (unsigned int i = 0; i < _vectors.size(); i++)
             delete _vectors[i];
 

@@ -17,10 +17,7 @@ void matIR::preretrieval::idfRelated( ResultStats& stats ,
 
     // Compute IDF from qstats
     arma::vec df = stats.getQueryStats().getQueryDFs();
-    cout<< stats.documentCount << endl;
-    df.print();
     arma::vec idf = arma::log((stats.documentCount + 1) / (df + 0.5));
-    idf.print();
     feature_scores.push_back(std::make_pair("idfSum", arma::sum(idf)));
     feature_scores.push_back(std::make_pair("idfStdDev", arma::stddev(idf)));
     feature_scores.push_back(std::make_pair("idfAve", arma::mean(idf)));
@@ -64,7 +61,7 @@ void matIR::preretrieval::query_scope( ResultStats& stats ,indri::api::QueryEnvi
         //break;
     }
     queryExpression += " )";
-    cout << queryExpression << endl;
+
 
     double nq = env.expressionCount(queryExpression);
     double queryScore = -1 * log(nq / stats.documentCount);
@@ -84,8 +81,7 @@ void matIR::preretrieval::simplified_query_clarity( ResultStats& stats ,
     arma::vec pCollLang = (stats.getQueryStats().getQuerycTFs() /
                                                 stats.collectionLength);
 
-    pQueryLang.print("pcll");
-    pCollLang.print("ccll");
+
     double score = arma::sum(pQueryLang % arma::log( pQueryLang / pCollLang  ));
     feature_scores.push_back(std::make_pair("simplifiedQueryClarity", score));
     return;
@@ -96,8 +92,6 @@ void matIR::preretrieval::simple_features( ResultStats& stats ,
 
 
     std::map<string, int> queryTokens = stats.getQueryStats().getQueryTokens();
-    stats.getQueryStats().getQueryDFs().print();
-    stats.getQueryStats().getQueryTermIds().print();
     // Average Query Length
     arma::vec tokenLength(queryTokens.size());
     int i = 0;
@@ -164,7 +158,10 @@ void matIR::preretrieval::pmi( ResultStats& stats , indri::api::QueryEnvironment
         double p_t1_t2_D = env.expressionCount(queryExpression) / stats.collectionLength;
         double p_t1_D = query_ctf[i] / stats.collectionLength;
         double p_t2_D = query_ctf[i+1] / stats.collectionLength;
-        pmi_score(i) = (p_t1_t2_D / (p_t1_D * p_t2_D));
+        if(p_t1_D == 0 || p_t2_D == 0)
+            pmi_score(i) = 0;
+        else
+            pmi_score(i) = (p_t1_t2_D / (p_t1_D * p_t2_D));
     }
 
     feature_scores.push_back(std::make_pair("avgPMI", arma::mean(pmi_score)));
