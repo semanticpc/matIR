@@ -17,19 +17,17 @@
 #include "matIR/TermScoreFunctionFactory.hpp"
 #include "matIR/ResultStats.hpp"
 
-
 namespace matIR {
     class LanguageModel {
     public:
 
 
 
-	private:
+    private:
     	int _termLimit;
     	std::string _smoothing;
-    	matIR::ResultStats& _stats;
-
-    	matIR::scoring::TermScoreFunction* _termScorer;
+        matIR::ResultStats& _stats;
+        matIR::scoring::TermScoreFunction* _termScorer;
     	indri::utility::greedy_vector< std::pair< string, double > > _scoredTerms;
 
     public:

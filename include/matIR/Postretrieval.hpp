@@ -8,17 +8,19 @@
 #ifndef POSTRETRIEVAL_HPP
 #define	POSTRETRIEVAL_HPP
 #include <vector>
+
 #include "matIR/LanguageModel.hpp"
 #include "indri/QueryEnvironment.hpp"
 #include "matIR/QueryStats.hpp"
 #include "indri/greedy_vector"
+#include "indri/RelevanceModel.hpp"
 
 namespace matIR {
     namespace postretrieval {
 
         // Functions for Pre-retrieval Features goes here
 
-        void query_clarity( matIR::LanguageModel& lm_model,
+        void query_clarity( std::string query,
         indri::api::QueryEnvironment& env,
         indri::utility::greedy_vector< std::pair< string, double > >& feature_scores);
 

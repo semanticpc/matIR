@@ -94,11 +94,11 @@ public:
 
 
 private:
-	struct GramCounts {
-		Gram gram;
-		indri::utility::greedy_vector< std::pair< int, int > > counts;
-	};
 
+        struct GramCounts {
+             Gram gram;
+             indri::utility::greedy_vector< std::pair< int, int > > counts;
+         };
 
 	typedef indri::utility::HashTable< Gram*, GramCounts*, Gram::hash, Gram::string_comparator > HGram;
 	HGram _gramTable;

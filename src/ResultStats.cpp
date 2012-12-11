@@ -78,7 +78,7 @@ void matIR::ResultStats::_extractDocuments() {
     // gram occurs in each query result.
     //
 
-bool isValidWord(const string & word)
+bool isValid(const string & word)
 {
     size_t length = word.size();
     const char * chArray = word.c_str();
@@ -122,7 +122,7 @@ void matIR::ResultStats::_countGrams() {
 
                 // build the gram
 
-            if( positions[ j ] == 0 || (! isValidWord(stems[ positions[ j ] ])) ) {
+            if( positions[ j ] == 0 || (! isValid(stems[ positions[ j ] ])) ) {
                 containsOOV = true;
                 continue;
             }
@@ -179,25 +179,24 @@ void matIR::ResultStats::_buildStats() {
 
 	int tmpTermID = -1;
 	for( iter = _gramTable.begin(); iter != _gramTable.end(); iter++ ) {
-		double gramCount = 0;
-		++tmpTermID;
-                Gram* gram = *iter->first;
-   		GramCounts* gramCounts = *iter->second;
-   		gram->internal_termID = tmpTermID;
+            double gramCount = 0;
+            ++tmpTermID;
+            Gram* gram = *iter->first;
+            GramCounts* gramCounts = *iter->second;
+            gram->internal_termID = tmpTermID;
 
-		ctfVector(tmpTermID) = _environment.stemCount(gram->term);
-		dfVector(tmpTermID) =  _environment.documentStemCount(gram->term);
-		size_t c;
-		size_t r;
-		for( r = 0, c = 0; r < _results.size() && c < gramCounts->counts.size(); r++ ) {
-			if( gramCounts->counts[c].first == r ) {
-                    // we have counts for this result
-				tfMat(r, tmpTermID) = gramCounts->counts[c].second;
-				c++;
+            ctfVector(tmpTermID) = _environment.stemCount(gram->term);
+            dfVector(tmpTermID) =  _environment.documentStemCount(gram->term);
+            size_t c;
+            size_t r;
+            for( r = 0, c = 0; r < _results.size() && c < gramCounts->counts.size(); r++ ) {
+                if( gramCounts->counts[c].first == r ) {
+                // we have counts for this result
+                    tfMat(r, tmpTermID) = gramCounts->counts[c].second;
+                    c++;
+                }
             }
-
-		}
-	}
+        }
 
     return;
 

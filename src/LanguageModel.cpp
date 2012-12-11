@@ -8,7 +8,7 @@
 
 #include "matIR/LanguageModel.hpp"
 
-#include <math.h>
+#include <cmath>
 
 
 //
@@ -42,9 +42,23 @@ void matIR::LanguageModel::generateRelevanceModel(){
 
     for (int i=0; i < _stats.tfMat.n_rows ; i++) {
         // Need to transpose to be consistent with other vectors
+
         termFrequency_Md = arma::trans(_stats.tfMat.row(i));
         length_Md = (int)_stats.docLength[i];
-        lmscore += (_stats.docScores[i] * arma::exp(_termScorer->scoreOccurrence(termFrequency_Md, length_Md)));
+        arma::colvec termScore;
+        if(_smoothing == "")
+            termScore =  _termScorer->scoreOccurrence(termFrequency_Md, length_Md);
+        else
+            termScore = arma::exp(_termScorer->scoreOccurrence(termFrequency_Md, length_Md));
+
+        // Multiply the term score by a boolean vector to make sure the terms
+        //   not in the document are not given any additional score
+
+        //arma::uvec unitVector = termFrequency_Md > arma::zeros(_stats.tfMat.n_cols);
+        //termScore = termScore % unitVector;
+        (_stats.docScores[i] * termScore).t().print("doc");
+        lmscore += (_stats.docScores[i] * termScore);
+
     }
     arma::uvec indices = arma::sort_index(lmscore, 1);
     _stats.sortGrams();

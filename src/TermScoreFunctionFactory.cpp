@@ -45,9 +45,9 @@ matIR::scoring::TermScoreFunction* matIR::scoring::TermScoreFunctionFactory::get
         double collectionLambda;
 
         if( spec.exists( "collectionLambda" ) )
-            collectionLambda = spec.get( "collectionLambda", 0.5 );
+            collectionLambda = spec.get( "collectionLambda", 0.4 );
         else
-            collectionLambda = spec.get( "lambda", 0.5 );
+            collectionLambda = spec.get( "lambda", 0.4 );
 
         return new matIR::scoring::JelinekMercerTermScoreFunction( p_t_C, collectionLambda, documentLambda );
     }else {

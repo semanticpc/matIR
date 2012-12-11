@@ -6,39 +6,42 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 
-#include "matIR/ResultStats.hpp"
 #include "matIR/Postretrieval.hpp"
+#include "matIR/ResultStats.hpp"
 #include "indri/greedy_vector"
-#include <queue>
-#include <math.h>
 
-void matIR::postretrieval::query_clarity( matIR::LanguageModel& lm_model,
+#include <queue>
+
+#include <cmath>
+#include "matIR/LanguageModel.hpp"
+
+
+
+void matIR::postretrieval::query_clarity( std::string query,
         indri::api::QueryEnvironment& env,
         indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
 
-    double clarityScore = 0;
-    lm_model.setSmoothing("method:jm,lambda,0.5");
-    lm_model.generateRelevanceModel();
-    indri::utility::greedy_vector< std::pair< string, double > > terms = lm_model.getScoredTerms();
-    double sum=0, ln_Pr=0;
-    for( size_t j=0; j < terms.size(); j++ ) {
-        std::string t = terms[j].first;
+    indri::query::RelevanceModel model( env, "method:jm,lambda,0.5", 1, 10 );
+    model.generate( query );
 
-        // query-clarity = SUM_w{P(w|Q)*log(P(w|Q)/P(w))}
-        // P(w)=cf(w)/|C|
-        // the relevance model uses stemmed terms, so use stemCount
-        double pw = ((double)env.stemCount(t)/(double)env.termCount());
-        // P(w|Q) is a prob computed by any model, e.g. relevance models
-        double pwq = terms[j].second;
-            std::cout << t << " "
-              << (terms[j].second*log(terms[j].second/
-    // the relevance model uses stemmed terms, so use stemCount
-                            ((double)env.stemCount(t)/
-                             (double)env.termCount())))/log(2.0) << " " << terms[j].second << std::endl;
-        sum += pwq;
-        clarityScore += (pwq)*log(pwq/pw);
+    const std::vector<indri::query::RelevanceModel::Gram*>& grams = model.getGrams();
+
+    int count = 0;
+    double sum=0, ln_Pr=0;
+    for( size_t j=0; j< 10 && j < grams.size(); j++ ) {
+      std::string t = grams[j]->terms[0];
+      count++;
+      // query-clarity = SUM_w{P(w|Q)*log(P(w|Q)/P(w))}
+      // P(w)=cf(w)/|C|
+      // the relevance model uses stemmed terms, so use stemCount
+      double pw = ((double)env.stemCount(t)/(double)env.termCount());
+
+      // P(w|Q) is a prob computed by any model, e.g. relevance models
+      double pwq = grams[j]->weight;
+      sum += pwq;
+      ln_Pr += (pwq)*log(pwq/pw);
     }
-    clarityScore = (clarityScore/(sum ? sum : 1.0)/log(2.0));
+    double clarityScore = (ln_Pr/(sum ? sum : 1.0)/log(2.0));
 
     feature_scores.push_back(std::make_pair("queryClarity", clarityScore));
     return;
@@ -51,8 +54,8 @@ void matIR::postretrieval::NQC( ResultStats& stats ,
     double score_D = arma::sum(stats.getQueryStats().getQuerycTFs()
                                                 / stats.collectionLength);
 
-    double nqc = arma::sum((stats.docScores - mu) / score_D);
-    nqc /= k;
+    double nqc = sqrt(arma::sum(arma::square(stats.docScores - mu)) / k) / score_D;
+
 
     feature_scores.push_back(std::make_pair("NQC", nqc));
 }
@@ -60,9 +63,9 @@ void matIR::postretrieval::NQC( ResultStats& stats ,
 void matIR::postretrieval::retScore_related( ResultStats& stats ,
             indri::utility::greedy_vector< std::pair< string, double > >& feature_scores){
 
-    feature_scores.push_back(std::make_pair("maxRetrievalScore", arma::max(stats.docScores)));
-    feature_scores.push_back(std::make_pair("meanRetrievalScore", arma::mean(stats.docScores)));
-    feature_scores.push_back(std::make_pair("varRetrievalScore", arma::var(stats.docScores)));
+    feature_scores.push_back(std::make_pair("maxRetScore", arma::max(stats.docScores)));
+    feature_scores.push_back(std::make_pair("meanRetScore", arma::mean(stats.docScores)));
+    feature_scores.push_back(std::make_pair("varRetScore", arma::var(stats.docScores)));
 }
 
 
