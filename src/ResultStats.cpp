@@ -205,7 +205,7 @@ void matIR::ResultStats::_buildStats() {
 
 arma::mat matIR::ResultStats::getTFIDFMatrix() {
 	arma::mat tfidfMat = tfMat;
-        arma::vec idf = arma::log((documentCount - dfVector + 0.5) / (dfVector + 0.5));
+        arma::vec idf = arma::log((documentCount + 1) / (dfVector.t() + 0.5));
 	tfidfMat.each_row() %= idf;
 	return tfidfMat;
 }

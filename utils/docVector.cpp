@@ -165,6 +165,7 @@ void postretrievalFeatures(std::string query, matIR::ResultStats& rs_stats,
 
 }
 
+
 void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& param,
         indri::api::QueryEnvironment& env) {
 
@@ -197,7 +198,10 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
                 if(tfidf(row,col) != 0.0)
                     cout << " " << col << ":" << tfidf(row,col) ;
             }
-            cout << " #" << extDocIDs[row];
+            arma::vec docVec = stats.tfMat.row(row);
+            int numOfQTerms = arma::sum(docVec.elem(stats.getQueryStats().getQueryTermIds()));
+
+            cout << " #" << extDocIDs[row] << ", " << stats.docLength(row) << ", " << numOfQTerms;
             cout << endl;
         }
 
@@ -209,7 +213,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
 static void usage(indri::api::Parameters param) {
     if (!param.exists("query") || !(param.exists("index") ||
             param.exists("server")) || !param.exists("documents")) {
-        std::cerr << "featureVector usage: " << std::endl
+        std::cerr << "docVector usage: " << std::endl
                 << "   featureVector -query=myquery -index=myindex -documents=10 -maxGrams=2" << std::endl
                 << "     myquery: a valid Indri query (be sure to use quotes around it if there are spaces in it)" << std::endl
                 << "     myindex: a valid Indri index" << std::endl

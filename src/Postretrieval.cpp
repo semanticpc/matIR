@@ -6,6 +6,7 @@
 // Description : Hello World in C, Ansi-style
 //============================================================================
 
+#include "indri/RelevanceModel.hpp"
 #include "matIR/Postretrieval.hpp"
 #include "matIR/ResultStats.hpp"
 #include "indri/greedy_vector"
@@ -55,8 +56,6 @@ void matIR::postretrieval::NQC( ResultStats& stats ,
                                                 / stats.collectionLength);
 
     double nqc = sqrt(arma::sum(arma::square(stats.docScores - mu)) / k) / score_D;
-
-
     feature_scores.push_back(std::make_pair("NQC", nqc));
 }
 

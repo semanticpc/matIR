@@ -13,7 +13,7 @@
 #include "indri/QueryEnvironment.hpp"
 #include "matIR/QueryStats.hpp"
 #include "indri/greedy_vector"
-#include "indri/RelevanceModel.hpp"
+
 
 namespace matIR {
     namespace postretrieval {
