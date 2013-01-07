@@ -93,8 +93,6 @@ public:
 
 
 
-private:
-
         struct GramCounts {
              Gram gram;
              indri::utility::greedy_vector< std::pair< int, int > > counts;
@@ -102,6 +100,10 @@ private:
 
 	typedef indri::utility::HashTable< Gram*, GramCounts*, Gram::hash, Gram::string_comparator > HGram;
 	HGram _gramTable;
+
+private:
+
+
 
 
         matIR::QueryStats _queryStatistics;

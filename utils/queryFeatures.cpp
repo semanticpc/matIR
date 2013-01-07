@@ -196,8 +196,9 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
         // Generate Post-retrieval features
         // Generate Document features
 
-        // Print query related features
 
+
+        // Print query related features
         if(header){
             header = false;
             cout << "topic";

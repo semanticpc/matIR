@@ -116,54 +116,6 @@ static void open_indexes(indri::api::QueryEnvironment& environment, indri::api::
         environment.setScoringRules(smoothingRules);
 }
 
-
-void preretrievalFeatures(matIR::ResultStats& rs_stats, indri::api::QueryEnvironment& env,
-       indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
-
-
-    // Some simple features such as queryLength, average Token Length, etc
-    matIR::preretrieval::simple_features(rs_stats, features_scores);
-
-    // IDF Related Features
-    matIR::preretrieval::idfRelated(rs_stats, features_scores);
-
-    // cTF Related Features
-    matIR::preretrieval::ctfRelated(rs_stats, features_scores);
-
-    // Simplified Query Clarity
-    matIR::preretrieval::simplified_query_clarity(rs_stats, features_scores);
-
-    // Collection Query Similarity
-    matIR::preretrieval::collection_query_similarity(rs_stats, features_scores);
-
-    // Point-wise Mutual Information
-    matIR::preretrieval::pmi(rs_stats, env, features_scores);
-
-    // Query Scope
-    //matIR::preretrieval::query_scope(rs_stats, env, features_scores);
-
-
-
-}
-
-
-void postretrievalFeatures(std::string query, matIR::ResultStats& rs_stats,
-        indri::api::QueryEnvironment& env,
-        indri::api::Parameters& param,
-        indri::utility::greedy_vector< std::pair< string, double > >& features_scores){
-        int termLimit = 10;
-        std::string rmSmoothing = "";
-        //matIR::LanguageModel lm(rmSmoothing, termLimit, rs_stats);
-        //lm.generateRelevanceModel();
-
-        matIR::postretrieval::query_clarity(query, env, features_scores);
-        //matIR::postretrieval::query_feedback(lm, env, features_scores);
-        matIR::postretrieval::NQC(rs_stats, features_scores);
-        matIR::postretrieval::retScore_related(rs_stats, features_scores);
-        //matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
-
-}
-
 void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& param,
         indri::api::QueryEnvironment& env) {
 
@@ -171,7 +123,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
     int termLimit = 10;//(int) param[ "termLimit" ];
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
-
+    cout << "topic, docLength, precentQterms, entropy" << endl;
     bool header = true;
     while (queries.size() > 0) {
         matIR::ResultStats stats(env, documents);
@@ -185,18 +137,9 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
             stats.init(q->text);
         }
 
-        //indri::utility::greedy_vector< std::pair< string, double > > model = lm.getScoredTerms();
         indri::utility::greedy_vector< std::pair< string, double > > features_scores;
 
-        // Generate Pre-retrieval features
-        //preretrievalFeatures(stats, env,  features_scores);
-
-        //postretrievalFeatures(q->text, stats, env, param, features_scores);
-
-        // Generate Post-retrieval features
-        // Generate Document features
-
-        // Print query related features
+        // Print document features
 
         arma::mat tfidf = stats.getTFIDFMatrix();
 
@@ -223,17 +166,17 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
             double entropy = 0;
             for(int col=0; col < tfidf.n_cols; col++){
                 if(tfidf(row,col) != 0.0){
-                    cout << " " << col << ":" << tfidf(row,col) ;
                     double p_w = (double)stats.tfMat(row,col) / stats.docLength(row);
                     entropy += p_w * log(p_w);
                 }
                 if(qterms.find(col) != qterms.end())
                     numOfQTerms += stats.tfMat(row,col);
-
-
             }
             entropy *= -1;
             arma::vec docVec = stats.tfMat.row(row);
+
+
+            cout << extDocIDs[row] << ", " << stats.docLength(row) << ", " << numOfQTerms / stats.docLength(row)  << "," << entropy ;
             cout << endl;
         }
 
