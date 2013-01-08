@@ -174,11 +174,11 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
                 if(qterms.find(col) != qterms.end())
                     numOfQTerms += stats.tfMat(row,col);
 
-                cout << " # " << extDocIDs[row] << endl;
+
             }
             entropy *= -1;
             arma::vec docVec = stats.tfMat.row(row);
-            cout << endl;
+            cout << " # " << extDocIDs[row] << endl;
         }
 
 
