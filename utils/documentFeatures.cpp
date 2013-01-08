@@ -123,7 +123,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
     int termLimit = 10;//(int) param[ "termLimit" ];
 
     std::string rmSmoothing = ""; // eventually, we should offer relevance model smoothing
-    cout << "topic, docLength, precentQterms, entropy" << endl;
+    cout << "topic, docid, docLength, precentQterms, entropy" << endl;
     bool header = true;
     while (queries.size() > 0) {
         matIR::ResultStats stats(env, documents);
