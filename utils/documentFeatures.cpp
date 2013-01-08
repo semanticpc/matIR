@@ -161,7 +161,6 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
 
         std::vector<std::string> extDocIDs = env.documentMetadata(docIDs, "docno");
         for(int row=0; row < tfidf.n_rows; row++){
-            cout << q->number;
             int numOfQTerms = 0;
             double entropy = 0;
             for(int col=0; col < tfidf.n_cols; col++){
@@ -176,7 +175,7 @@ void generateFeatures(std::queue< query_t* >& queries, indri::api::Parameters& p
             arma::vec docVec = stats.tfMat.row(row);
 
 
-            cout << extDocIDs[row] << ", " << stats.docLength(row) << ", " << numOfQTerms / stats.docLength(row)  << "," << entropy ;
+            cout << q->number << ", " << extDocIDs[row] << ", " << stats.docLength(row) << ", " << numOfQTerms / stats.docLength(row)  << ", " << entropy ;
             cout << endl;
         }
 

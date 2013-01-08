@@ -160,7 +160,7 @@ void postretrievalFeatures(std::string query, matIR::ResultStats& rs_stats,
         //matIR::postretrieval::query_feedback(lm, env, features_scores);
         matIR::postretrieval::NQC(rs_stats, features_scores);
         matIR::postretrieval::retScore_related(rs_stats, features_scores);
-        matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
+        //matIR::postretrieval::weighted_info_gain(rs_stats, features_scores);
 
 }
 
