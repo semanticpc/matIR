@@ -8,7 +8,7 @@
 #ifndef SIMULATIONS_HPP
 #define	SIMULATIONS_HPP
 
-#include "DivQrels.hpp"
+#include "Utils.hpp"
 
 
 using namespace std;
@@ -34,7 +34,7 @@ static int get_preference(arma::rowvec vectorA, arma::rowvec vectorB, arma::rowv
 
 }
 
-static arma::vec simulate_level(DivQrels* qrels, vector<int> rankedDocs=vector<int>()){
+static arma::vec simulate_level(Qrels* qrels, vector<int> rankedDocs=vector<int>()){
 
 
     // Initialize Seen Subtopic Counts

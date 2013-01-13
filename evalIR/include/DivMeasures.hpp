@@ -8,57 +8,67 @@
 #ifndef DIVMEASURES_HPP
 #define	DIVMEASURES_HPP
 
-#include <armadillo>
+
 #include <set>
 #include <math.h>
-#include "DivQrels.hpp"
-#include "Simulations.hpp"
+
+#include "Utils.hpp"
+//#include "Simulations.hpp"
+#include <armadillo>
 
 using namespace std;
 
-static double s_recall(arma::mat runMatrix, DivQrels* qrels, int rank){
+static double s_recall(arma::mat runMatrix, Qrels qrels, int rank){
     // Use a greedy approach to find the max subtopics at rank k
-    arma::vec tmpVector;
 
-    arma::rowvec seenSubtopics = arma::zeros<arma::rowvec>(qrels->numOfSubtopics);
+    // Initialize working variables
+    int numOfSubtopics = int(*qrels.subtopics.rbegin());
+    int numOfRows = min(rank, int(qrels.relDocs.size()));
+    arma::vec tmpVector;
+    arma::rowvec seenSubtopics = arma::zeros<arma::rowvec>(numOfSubtopics);
     set<int> idealRankList;
     set<int>::iterator it;
-    for(int i = 0; i < qrels->numOfRelDocuments; i++){
-        if(i > rank)
-            break;
+
+    // Greedy approach searches for the best document at each rank
+    for(int i = 0; i < numOfRows; i++){
         int maxNewSubtopics = 0;
         int pickedDoc = -1;
+        // Iterate through the set of relevant documents to find
+        //   the best document
+        for(int j = 0; j < qrels.relDocs.size(); j++){
 
-        for(int j = 0; j < qrels->numOfRelDocuments; j++){
+            // Ignore the document already picked
             it = idealRankList.find(j);
             if(it != idealRankList.end() )
                 continue;
 
-            int numOfNewSubtopics = arma::sum((qrels->subtopicMatrix.row(j) + seenSubtopics) >
-                                arma::zeros<arma::vec>(qrels->numOfSubtopics));
+            // Compute the number of new subtopics the document contains
+            int numOfNewSubtopics = arma::sum((qrels.matrix.row(j) + seenSubtopics) >
+                                arma::zeros<arma::vec>(numOfSubtopics));
 
+            // Keep track of the best document/ max number of subtopics
             if(numOfNewSubtopics > maxNewSubtopics){
                 maxNewSubtopics = numOfNewSubtopics;
                 pickedDoc = j;
             }
         }
-        seenSubtopics += qrels->subtopicMatrix.row(pickedDoc);
+
+        // Add the best document to the ideal rank list
+        //  and keep track of subtopics seen
+        seenSubtopics += qrels.matrix.row(pickedDoc);
         idealRankList.insert(pickedDoc);
     }
-    int i = 0;
-    arma::mat idealMatrix = arma::zeros<arma::mat>(rank, qrels->numOfSubtopics);
-    for (it=idealRankList.begin(); it!=idealRankList.end(); it++)
-        idealMatrix.row(i++) = qrels->subtopicMatrix.row(*it);
 
-    double maxSubtopics = arma::sum(arma::sum(idealMatrix) >
-                                        arma::zeros<arma::vec>(qrels->numOfSubtopics));
+    double maxSubtopics = arma::sum(seenSubtopics >
+                                        arma::zeros<arma::vec>(numOfSubtopics));
 
     // Consider only the top 'rank' number of documents
     runMatrix = runMatrix.rows(0,rank - 1);
     double retSubtopics = arma::sum(arma::sum(runMatrix) >
-                                        arma::zeros<arma::vec>(qrels->numOfSubtopics));
+                                        arma::zeros<arma::vec>(numOfSubtopics));
     return retSubtopics/maxSubtopics;
 }
+
 
 
 
@@ -75,21 +85,20 @@ static arma::rowvec compute_andcg_discount(arma::rowvec subtopics, double alpha)
 }
 
 
-static arma::mat ideal_andcg_matrix(DivQrels* qrels, int rank, double alpha){
-    arma::mat idealMatrix = arma::zeros<arma::mat>(rank, qrels->numOfSubtopics);
-    arma::rowvec seenSubtopics = arma::zeros<arma::rowvec>(qrels->numOfSubtopics);
+static arma::mat ideal_andcg_matrix(Qrels qrels, int rank, double alpha){
+    int numOfSubtopics = int(*qrels.subtopics.rbegin());
+    arma::mat idealMatrix = arma::zeros<arma::mat>(rank, numOfSubtopics);
+    arma::rowvec seenSubtopics = arma::zeros<arma::rowvec>(numOfSubtopics);
     set<int> idealRankList;
     set<int>::iterator it;
-    for(int i = 0; i < qrels->numOfRelDocuments; i++){
-        if(i > rank)
-            break;
+    for(int i = 0; i < min(rank, int(qrels.relDocs.size())); i++){
         double maxGain = 0;
         int pickedDoc = -1;
-        for(int j = 0; j < qrels->numOfRelDocuments; j++){
+        for(int j = 0; j < qrels.relDocs.size(); j++){
             it = idealRankList.find(j);
             if(it != idealRankList.end() )
                 continue;
-            arma::rowvec J_d = qrels->subtopicMatrix.row(j);
+            arma::rowvec J_d = qrels.matrix.row(j);
             // Compute the discount
             arma::rowvec discount = compute_andcg_discount(seenSubtopics, alpha);
 
@@ -99,9 +108,9 @@ static arma::mat ideal_andcg_matrix(DivQrels* qrels, int rank, double alpha){
                 pickedDoc = j;
             }
         }
-        seenSubtopics += qrels->subtopicMatrix.row(pickedDoc);
+        seenSubtopics += qrels.matrix.row(pickedDoc);
         idealRankList.insert(pickedDoc);
-        idealMatrix.row(i) = qrels->subtopicMatrix.row(pickedDoc);
+        idealMatrix.row(i) = qrels.matrix.row(pickedDoc);
     }
 
     return idealMatrix;
@@ -120,7 +129,7 @@ static double compute_dcg(arma::mat matrix, int rank, double alpha){
     }
     return dcg;
 }
-static double andcg(arma::mat run_matrix, DivQrels* qrels, int rank, double alpha=0.5){
+static double andcg(arma::mat run_matrix, Qrels qrels, int rank, double alpha=0.5){
     // Use a greedy approach to find the ideal rank list
 
     arma::mat ideal_matrix = ideal_andcg_matrix(qrels, rank, alpha);
@@ -173,9 +182,9 @@ static double computePrecision(arma::vec grades, int rank, double alpha){
 }
 
 
-static double erria(arma::mat matrix, DivQrels* qrels, int rank, double alpha=0.5){
-    int num_of_subtopics = arma::sum(arma::sum(qrels->subtopicMatrix) > arma::zeros(qrels->numOfSubtopics));
-    //int num_of_subtopics = qrels->numOfSubtopics;
+static double erria(arma::mat matrix, Qrels qrels, int rank, double alpha=0.5){
+    int numOfSubtopics = int(*qrels.subtopics.rbegin());
+    int num_of_subtopics = arma::sum(arma::sum(qrels.matrix) > arma::zeros(numOfSubtopics));
     double erria = 0;
     arma::rowvec subtopicGain = arma::ones(matrix.n_cols);
     for (int i = 0; i < rank; i++) {
@@ -199,7 +208,7 @@ static double erria(arma::mat matrix, DivQrels* qrels, int rank, double alpha=0.
 }
 
 
-
+/*
 
 // Preference Based Utility Measures
 static double f_function(arma::vec utilities, string type="ave"){
@@ -219,7 +228,7 @@ static double p_function(int rank, string type="none"){
 
 
 static double get_docUtility_score(int docIndex, int prevDocIndex,
-                        DivQrels* qrels, map<string, arma::vec>& cache){
+                        Qrels* qrels, map<string, arma::vec>& cache){
 
     // Generate a code for the current rankedDocs
     string code; ostringstream convert;
@@ -244,7 +253,7 @@ static double get_docUtility_score(int docIndex, int prevDocIndex,
 }
 
 
-static arma::vec get_doc_utilites(DivQrels* qrels, vector<string> rankList,
+static arma::vec get_doc_utilites(Qrels* qrels, vector<string> rankList,
                                         int rank, map<string, arma::vec>& cache){
 
     arma::vec doc_utility = arma::zeros(rank);
@@ -283,7 +292,7 @@ static arma::vec get_doc_utilites(DivQrels* qrels, vector<string> rankList,
 
 
 
-static arma::vec get_ideal_utilites(DivQrels* qrels, int rank, map<string, arma::vec>& cache){
+static arma::vec get_ideal_utilites(Qrels* qrels, int rank, map<string, arma::vec>& cache){
 
     arma::vec ideal_utility = arma::zeros(rank);
     vector<int> rankList_docIndex;
@@ -350,7 +359,7 @@ static vector<double> compute_pref_score(arma::vec doc_utility, arma::vec ideal_
 
 }
 
-static double pref_measure(vector<string> rankList, DivQrels* qrels, int rank){
+static double pref_measure(vector<string> rankList, Qrels* qrels, int rank){
 
 
     map<string, arma::vec>  cache;
@@ -365,6 +374,5 @@ static double pref_measure(vector<string> rankList, DivQrels* qrels, int rank){
 
     return ave_none[4];
 }
-
+*/
 #endif	/* DIVMEASURES_HPP */
-
