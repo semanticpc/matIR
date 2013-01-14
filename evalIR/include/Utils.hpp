@@ -21,7 +21,7 @@ using namespace std;
 
 struct Document{
     string docid;
-    string query;
+    int query;
 
     // Judgments Related
     set<int> subtopics;
@@ -34,7 +34,7 @@ struct Document{
 
     bool operator < (const Document& b) const{
         if (score == b.score){
-            return docid < b.docid;
+            return docid > b.docid;
         }else
             return score > b.score;
     }
@@ -45,16 +45,17 @@ struct docid_comparison{
     //string docid;
     //find_doc(string docid) : docid(docid) {}
     bool operator () ( const Document& a, const Document& b ) const{
-        return a.docid < b.docid;
+        return a.docid > b.docid;
     }
 };
 
 struct Qrels{
-    string query;
+    int query;
     map<Document, int, docid_comparison> relDocs;
     set<Document> nonRelDocs;
     set<int> subtopics;
     arma::mat matrix;
+
 };
 
 
@@ -62,68 +63,70 @@ struct Qrels{
 
 
 
-map<string, vector<Document> > readRunFile(string runFileName){
-    map<string, vector<Document> > run;
+static map<int, vector<Document> > readRunFile(string runFileName){
+    map<int, vector<Document> > run;
 
     std::ifstream runFile(runFileName.c_str(), ios_base::in);
 
     std::string q0;
-    string query;
+    int query;
 
-    string curQuery = "";
+    int curQuery;
     bool doneParsing = false;
 
     // Parse First Line
     vector<Document> documents;
     Document d;
-    runFile >> query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
+    runFile >> d.query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
     query = d.query;
     curQuery = d.query;
-
     documents.push_back(d);
 
 
-    while (true) {
-        while(curQuery == query){
-            Document d;
-            runFile >> d.query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
-            query = d.query;
-            documents.push_back(d);
-            if( runFile.eof() ) {
-                doneParsing = true;
-                break;
-            }
 
+    while(curQuery == query){
+        Document d;
+        runFile >> d.query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
+        query = d.query;
+        if(curQuery != query) {
+            //std::sort(documents.begin(), documents.end());
+            run.insert(make_pair(curQuery,documents));
+
+            curQuery = query;
+            documents.clear();
         }
-        std::sort(documents.begin(), documents.end());
-        run.insert(make_pair(curQuery,documents));
 
-        if(doneParsing) break;
-        curQuery = query;
-        vector<Document> documents;
         documents.push_back(d);
+        if( runFile.eof()) {
+            doneParsing = true;
+            break;
         }
+    }
+
+    //std::sort(documents.begin(), documents.end());
+    run.insert(make_pair(curQuery,documents));
     return run;
 }
 
 
-map<string, Qrels> readDiversityQrelsFile(string qrelsFileName){
+static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
     std::ifstream qrelsFile(qrelsFileName.c_str(), ios_base::in);
 
 
     // Initialization
 
-    map<string, Qrels> qrels;
+    map<int, Qrels> qrels;
     bool doneParsing = false;
-    std::string curQuery = "";
+    int curQuery;
     std::string docid;
-    std::string query;
+    int query;
     int subtopic;
     int rel;
 
 
     // Initialize first query
     Qrels q;
+    q.relDocs.clear();
     map<string, Document> relDocuments;
 
 
@@ -136,6 +139,7 @@ map<string, Qrels> readDiversityQrelsFile(string qrelsFileName){
     d.grade = rel;
 
     curQuery = query;
+    q.query = curQuery;
 
     // Add the document to the relevant or non-relevant list
     if(rel <= 0)
@@ -144,103 +148,99 @@ map<string, Qrels> readDiversityQrelsFile(string qrelsFileName){
         relDocuments.insert(make_pair(docid, d));
 
     // Loop through add all other documents
-    while (true) {
+    while(curQuery == query){
 
-        // Loop through documents in the same query
-        while(curQuery == query){
-
-            // Read document
-            qrelsFile >> query >> subtopic >> docid >> rel;
-            Document d;
-            d.query = query;
-            d.docid = docid;
-            d.grade = rel;
-
-
-            // If the document was seen before simple add the subtopic
-            map<string,Document>::iterator it = relDocuments.find(docid);
-            if (it != relDocuments.end()){
-                it->second.subtopics.insert(subtopic);
-                if(q.subtopics.find(subtopic) == q.subtopics.end())
-                    q.subtopics.insert(subtopic);
-            }else{
-                d.subtopics.insert(subtopic);
-                if(q.subtopics.find(subtopic) == q.subtopics.end())
-                    q.subtopics.insert(subtopic);
-                if(rel <= 0)
-                    q.nonRelDocs.insert(d);
-                else
-                    relDocuments.insert(make_pair(docid, d));
-            }
-
-
-            // Check for end of file
-            if( qrelsFile.eof() ) {
-                doneParsing = true;
-                break;
-            }
-
-        }
-        // Iterate through the map and add it to the relevant set
-        q.matrix = arma::zeros(int(relDocuments.size()), int(*q.subtopics.rbegin()));
-
-        map<string,Document>::iterator doc_it;
-        int doc_index = 0;
-        for(doc_it = relDocuments.begin(); doc_it != relDocuments.end(); ++doc_it ) {
-            set<int>::iterator st_it;
-            q.relDocs.insert(make_pair(doc_it->second,doc_index));
-            for(st_it= doc_it->second.subtopics.begin();
-                    st_it != doc_it->second.subtopics.end(); st_it++ )
-                q.matrix(doc_index, (*st_it)-1)  = 1;
-
-            doc_index++;
-        }
-        qrels.insert(make_pair(curQuery, q));
-
-
-        if(doneParsing) break;
-
-        // If Not End of file initialize another query
-        Qrels q;
-        map<string, Document> relDocuments;
-        curQuery = query;
-
-        // Read the next document
+        // Read document
         qrelsFile >> query >> subtopic >> docid >> rel;
         Document d;
         d.query = query;
         d.docid = docid;
-        d.subtopics.insert(subtopic);
         d.grade = rel;
 
-        // Add the document to the relevant or non-relevant list
-        if(q.subtopics.find(subtopic) == q.subtopics.end())
-            q.subtopics.insert(subtopic);
-        if(rel <= 0)
-            q.nonRelDocs.insert(d);
-        else
-            relDocuments.insert(make_pair(docid, d));
+        if(curQuery != query) {
+            q.matrix = arma::zeros(int(relDocuments.size()), int(*q.subtopics.rbegin()));
 
+            map<string,Document>::iterator doc_it;
+            int doc_index = 0;
+            for(doc_it = relDocuments.begin(); doc_it != relDocuments.end(); ++doc_it ) {
+                set<int>::iterator st_it;
+                q.relDocs.insert(make_pair(doc_it->second,doc_index));
+                for(st_it= doc_it->second.subtopics.begin();
+                        st_it != doc_it->second.subtopics.end(); st_it++ )
+                    q.matrix(doc_index, (*st_it)-1)  = 1;
+
+                doc_index++;
+            }
+            qrels.insert(make_pair(curQuery, q));
+
+
+
+            q.matrix.reset();
+            q.subtopics.clear();
+            q.nonRelDocs.clear();
+            q.relDocs.clear();
+            q.query = curQuery;
+            relDocuments.clear();
+            curQuery = query;
+
+        }
+
+        // If the document was seen before simple add the subtopic
+        map<string,Document>::iterator it = relDocuments.find(docid);
+        if (it != relDocuments.end()){
+            it->second.subtopics.insert(subtopic);
+            if(q.subtopics.find(subtopic) == q.subtopics.end())
+                q.subtopics.insert(subtopic);
+        }else{
+            d.subtopics.insert(subtopic);
+            if(q.subtopics.find(subtopic) == q.subtopics.end())
+                q.subtopics.insert(subtopic);
+            if(rel <= 0)
+                q.nonRelDocs.insert(d);
+            else
+                relDocuments.insert(make_pair(docid, d));
+        }
+
+        // Check for end of file
+         if( qrelsFile.eof() ) {
+             doneParsing = true;
+             break;
+         }
     }
-        return qrels;
+
+    q.matrix = arma::zeros(int(relDocuments.size()), int(*q.subtopics.rbegin()));
+
+    map<string,Document>::iterator doc_it;
+    int doc_index = 0;
+    for(doc_it = relDocuments.begin(); doc_it != relDocuments.end(); ++doc_it ) {
+        set<int>::iterator st_it;
+        q.relDocs.insert(make_pair(doc_it->second,doc_index));
+        for(st_it= doc_it->second.subtopics.begin();
+                st_it != doc_it->second.subtopics.end(); st_it++ )
+            q.matrix(doc_index, (*st_it)-1)  = 1;
+
+        doc_index++;
+    }
+    qrels.insert(make_pair(curQuery, q));
+
+
+
+    return qrels;
 }
 
 
-arma::mat judge_diversity(vector<Document> run, Qrels qrels, int rank){
+static arma::mat judge_diversity(vector<Document> run, Qrels qrels, int rank){
     arma::mat run_matrix = arma::zeros(std::min(rank, int(run.size())),int(*qrels.subtopics.rbegin()) );
     vector<Document>::iterator doc;
     int doc_index = 0;
     for(doc = run.begin(); doc != run.end(); ++doc ) {
-
-        //map<Document, int>::iterator index_iter = std::find_if(qrels.relDocs.begin(),
-          //      qrels.relDocs.end(), find_doc(doc->docid));
+        if(doc_index >= rank) break;
         map<Document, int>::iterator index_iter = qrels.relDocs.find(*doc);
-        if(index_iter != qrels.relDocs.end()){
-
+        if(index_iter != qrels.relDocs.end())
             run_matrix.row(doc_index) = qrels.matrix.row(int(index_iter->second));
-        }
         doc_index++;
     }
+
     return run_matrix;
 }
 

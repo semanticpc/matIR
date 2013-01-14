@@ -11,14 +11,12 @@
 
 #include <set>
 #include <math.h>
-
-#include "Utils.hpp"
-//#include "Simulations.hpp"
 #include <armadillo>
+#include "Simulations.hpp"
 
 using namespace std;
 
-static double s_recall(arma::mat runMatrix, Qrels qrels, int rank){
+static arma::vec s_recall(arma::mat runMatrix, Qrels qrels, int rank){
     // Use a greedy approach to find the max subtopics at rank k
 
     // Initialize working variables
@@ -63,10 +61,14 @@ static double s_recall(arma::mat runMatrix, Qrels qrels, int rank){
                                         arma::zeros<arma::vec>(numOfSubtopics));
 
     // Consider only the top 'rank' number of documents
-    runMatrix = runMatrix.rows(0,rank - 1);
-    double retSubtopics = arma::sum(arma::sum(runMatrix) >
+    arma::vec s_recall = arma::zeros(rank);
+    for(int i=0; i < rank; i++){
+        arma::mat matrix = runMatrix.rows(0,i);
+        double retSubtopics = arma::sum(arma::sum(matrix) >
                                         arma::zeros<arma::vec>(numOfSubtopics));
-    return retSubtopics/maxSubtopics;
+        s_recall(i) = (retSubtopics/maxSubtopics);
+    }
+    return s_recall;
 }
 
 
@@ -112,11 +114,11 @@ static arma::mat ideal_andcg_matrix(Qrels qrels, int rank, double alpha){
         idealRankList.insert(pickedDoc);
         idealMatrix.row(i) = qrels.matrix.row(pickedDoc);
     }
-
     return idealMatrix;
 }
 
-static double compute_dcg(arma::mat matrix, int rank, double alpha){
+static arma::vec compute_dcg(arma::mat matrix, int rank, double alpha){
+    arma::vec dcg_vector = arma::zeros(rank);
     arma::rowvec seenSubtopics = arma::zeros<arma::rowvec>(matrix.n_cols);
     set<int>::iterator it;
     double dcg = 0;
@@ -126,20 +128,21 @@ static double compute_dcg(arma::mat matrix, int rank, double alpha){
         double gain = arma::sum(J_d % discount) / (log(2 + i)/log(2));
         dcg += gain;
         seenSubtopics += matrix.row(i);
+        dcg_vector(i) = dcg;
     }
-    return dcg;
+    return dcg_vector;
 }
-static double andcg(arma::mat run_matrix, Qrels qrels, int rank, double alpha=0.5){
+static arma::vec andcg(arma::mat run_matrix, Qrels qrels, int rank, double alpha=0.5){
     // Use a greedy approach to find the ideal rank list
 
     arma::mat ideal_matrix = ideal_andcg_matrix(qrels, rank, alpha);
-    return compute_dcg(run_matrix, rank, alpha) / compute_dcg(ideal_matrix, rank, alpha) ;
+    return (compute_dcg(run_matrix, rank, alpha) / compute_dcg(ideal_matrix, rank, alpha)) ;
 }
 
 
 // ERR Computation
-static double computeERR(arma::vec grades, int rank, double alpha){
-
+static arma::vec computeERR(arma::vec grades, int rank, double alpha){
+ arma::vec err_vector = arma::zeros(rank);
  double score = 0.0;
  double decay = 1.0;
  double r = 0.0;
@@ -148,8 +151,10 @@ static double computeERR(arma::vec grades, int rank, double alpha){
     double grade = (pow(2.0, grades(i)) - 1) / pow(2.0, 1);
     score += ( grade * decay) / (i + 1);
     decay *= (1 - grade);
+    err_vector(score) = score;
+
  }
- return score;
+ return err_vector;
 }
 
 
@@ -182,7 +187,8 @@ static double computePrecision(arma::vec grades, int rank, double alpha){
 }
 
 
-static double erria(arma::mat matrix, Qrels qrels, int rank, double alpha=0.5){
+static arma::vec erria(arma::mat matrix, Qrels qrels, int rank, double alpha=0.5){
+    arma::vec erria_vector = arma::zeros(rank);
     int numOfSubtopics = int(*qrels.subtopics.rbegin());
     int num_of_subtopics = arma::sum(arma::sum(qrels.matrix) > arma::zeros(numOfSubtopics));
     double erria = 0;
@@ -196,22 +202,25 @@ static double erria(arma::mat matrix, Qrels qrels, int rank, double alpha=0.5){
             }
         }
         erria += score / (i + 1);
+        erria_vector(i) = erria;
     }
     double norm;
     double normGain = num_of_subtopics;
+    arma::vec norm_vector = arma::zeros(rank);
     for (int i = 0; i < rank; i++){
       norm += normGain /((double)(i + 1));
       normGain *= (1.0 - alpha);
+      norm_vector(i) = (norm - num_of_subtopics);
     }
-    norm -= num_of_subtopics;
-    return erria / norm;
+    //norm -= num_of_subtopics;
+    return (erria_vector / norm_vector);
 }
 
 
-/*
+
 
 // Preference Based Utility Measures
-static double f_function(arma::vec utilities, string type="ave"){
+static double f_function(arma::vec utilities, string type){
     if (type == "ave")
         return arma::mean(utilities);
     else if (type == "min")
@@ -219,80 +228,24 @@ static double f_function(arma::vec utilities, string type="ave"){
 }
 
 
-static double p_function(int rank, string type="none"){
+static double p_function(int rank, string type){
     if (type == "none")
         return 1;
-    else if (type == "min")
-        return 0;
-}
-
-
-static double get_docUtility_score(int docIndex, int prevDocIndex,
-                        Qrels* qrels, map<string, arma::vec>& cache){
-
-    // Generate a code for the current rankedDocs
-    string code; ostringstream convert;
-    convert << prevDocIndex;
-    code = convert.str();
-
-    if(docIndex == -1)
-        return 0;
-    else if (docIndex != -1 && prevDocIndex == -1)
-        return cache.find("")->second(docIndex);
-    else if (docIndex != -1 && prevDocIndex != -1){
-        if(cache.find(code) != cache.end())
-            return cache.find(code)->second(docIndex);
-        else{
-            vector<int> rankedDocs;
-            rankedDocs.push_back(prevDocIndex);
-            arma::vec lvl_score = simulate_level(qrels, rankedDocs);
-            cache.insert(make_pair(code, lvl_score));
-            return lvl_score(docIndex);
-        }
-    }
-}
-
-
-static arma::vec get_doc_utilites(Qrels* qrels, vector<string> rankList,
-                                        int rank, map<string, arma::vec>& cache){
-
-    arma::vec doc_utility = arma::zeros(rank);
-    vector<int> rankList_docIndex;
-
-    if(rankList.size() < rank){
-        for(int i=rankList.size(); i < rank; i++)
-            rankList.push_back("dummyDoc");
-    }
-
-    // Get the document utilities
-    for (int i = 0; i < rank; i++) {
-        int docIndex;
-        // Obtain the index of the document
-        map<string, int>::iterator doc = qrels->docid_index_map.find(rankList[i]);
-        if(doc == qrels->docid_index_map.end())
-            docIndex = -1;
-        else
-            docIndex = doc->second;
-
-        // Calculate the document utilities
-        if(i == 0)
-            doc_utility(i) = get_docUtility_score(docIndex, -1, qrels, cache);
-        else{
-            arma::vec this_doc_utilities = arma::zeros(i);
-            for(int seenDoc=0; seenDoc < i; seenDoc++)
-                this_doc_utilities(seenDoc) = get_docUtility_score(docIndex,
-                                        rankList_docIndex[seenDoc], qrels, cache);
-
-            doc_utility(i) = f_function(this_doc_utilities);
-        }
-        rankList_docIndex.push_back(docIndex);
-    }
-    return doc_utility;
+    else if (type == "RBP"){
+        double theta = 0.5; // RBP
+        return pow((1.0 - theta),rank) * theta; // NRBP
+    } else if (type == "RR")
+        return 1.0/ (rank * (rank + 1.0)); // Rank
+    else if (type == "DCG")
+        return (1.0/ log(rank + 1.0)) - (1.0/ log(rank + 2)); // LogProb
 }
 
 
 
-static arma::vec get_ideal_utilites(Qrels* qrels, int rank, map<string, arma::vec>& cache){
+
+
+static arma::vec get_ideal_utilites(Qrels qrels, PrefSimulation& utility_scores,
+                                                        int rank, string fType){
 
     arma::vec ideal_utility = arma::zeros(rank);
     vector<int> rankList_docIndex;
@@ -300,21 +253,21 @@ static arma::vec get_ideal_utilites(Qrels* qrels, int rank, map<string, arma::ve
     for (int i = 0; i < rank; i++) {
         // Get Ideal Document at rank 1
         if(i == 0){
-            arma::uvec indices = arma::sort_index(cache.find("")->second, 1);
-            ideal_utility(i) = cache.find("")->second(indices(0));
-            rankList_docIndex.push_back(indices(0));
+            pair<int, double> bestDoc = utility_scores.get_BestUtilityDoc();
+            ideal_utility(i) = bestDoc.second;
+            rankList_docIndex.push_back(bestDoc.first);
         } else{
             double max_utility = 0;
             int max_doc = -1;
-            for(int docIndex=0; docIndex < qrels->numOfRelDocuments; docIndex++){
+            for(int docIndex=0; docIndex < qrels.relDocs.size(); docIndex++){
                 if(find(rankList_docIndex.begin(), rankList_docIndex.end(), docIndex)!=rankList_docIndex.end())
                     continue;
+
                 arma::vec this_doc_utilities = arma::zeros(i);
                 for(int seenDoc=0; seenDoc < i; seenDoc++)
-                    this_doc_utilities(seenDoc) = get_docUtility_score(docIndex,
-                                        rankList_docIndex[seenDoc],qrels, cache);
+                    this_doc_utilities(seenDoc) = utility_scores.get_UtilityScore(docIndex, rankList_docIndex[seenDoc]);
 
-                double score =  f_function(this_doc_utilities);
+                double score =  f_function(this_doc_utilities, fType);
                 if(score > max_utility){
                     max_utility = score;
                     max_doc = docIndex;
@@ -331,48 +284,126 @@ static arma::vec get_ideal_utilites(Qrels* qrels, int rank, map<string, arma::ve
 
 
 
+static arma::vec get_doc_utilites(Qrels qrels, vector<Document> run,
+                                PrefSimulation& utility_scores, int rank, string fType){
 
+    arma::vec utility = arma::zeros(rank);
+    vector<int> rankList_docIndex;
+    map<Document, int>::iterator find_doc;
+    int docIndex = -1;
+    // Get the document utilities
+    for (int i = 0; i < rank; i++) {
+        find_doc = qrels.relDocs.find(run.at(i));
+        if(find_doc != qrels.relDocs.end())
+            docIndex = find_doc->second;
+        else
+            docIndex = -1;
+        // Get Ideal Document at rank 1
+        if(i == 0){
+            utility(i) = utility_scores.get_UtilityScore(docIndex);
+            rankList_docIndex.push_back(docIndex);
+        } else{
+            arma::vec this_doc_utilities = arma::zeros(i);
+            for(int seenDoc=0; seenDoc < i; seenDoc++)
+                this_doc_utilities(seenDoc) = utility_scores.get_UtilityScore(docIndex, rankList_docIndex[seenDoc]);
 
-static vector<double> compute_pref_score(arma::vec doc_utility, arma::vec ideal_utility,
+            utility(i) = f_function(this_doc_utilities, fType);
+            rankList_docIndex.push_back(docIndex);
+        }
+
+    }
+    return utility;
+}
+
+ static arma::vec compute_pref_score(arma::vec doc_utility, arma::vec ideal_utility,
                                                     int rank, string pType){
     // Compute Preference scores
-    vector<double> pref_score;
+    arma::vec pref_score = arma::zeros(rank);
 
     double cummulativeScore = 0.0,cummulativeIdealScore = 0.0;
     for (int k = 0; k < rank; k++){
         double totalUtility = 0;
         for (int i = 0; i < k; i++)
                 totalUtility += doc_utility(i);
-        totalUtility = totalUtility * p_function(k + 1);
+        totalUtility = totalUtility * p_function(k + 1, pType);
 
         double totalIdealUtility = 0.0;
         for (int i = 0; i < k; i++)
             totalIdealUtility += ideal_utility(i);
-        totalIdealUtility = totalIdealUtility * p_function(k + 1);
+        totalIdealUtility = totalIdealUtility * p_function(k + 1,pType);
 
 
         cummulativeScore += totalUtility;
         cummulativeIdealScore += totalIdealUtility;
-        pref_score.push_back(cummulativeScore / cummulativeIdealScore);
+        pref_score(k) = (cummulativeScore / cummulativeIdealScore);
     }
     return pref_score;
 
 }
+// Some Testing Functions
+static void simulationTesting(PrefSimulation& utility_scores, Qrels qrels){
+    cout << endl;
+    cout << endl;
+    for(int i=0; i< qrels.relDocs.size(); i++){
+        cout << i << " " << utility_scores.get_UtilityScore(i) << endl;
+    }
+    for(int k=0; k< qrels.relDocs.size(); k++){
+    cout << endl;
+    cout << endl;
+    cout << k << endl;
+    for(int i=0; i< qrels.relDocs.size(); i++){
+        cout << i << " " << utility_scores.get_UtilityScore(i, k) << endl;
+    }}
 
-static double pref_measure(vector<string> rankList, Qrels* qrels, int rank){
+    cout << endl;
+    cout << endl;
+    map<Document, int>::iterator it;
+    for(it=qrels.relDocs.begin(); it != qrels.relDocs.end(); it++)
+        cout << it->first.docid << " " << it->second << endl;
 
 
-    map<string, arma::vec>  cache;
-    cache.insert(make_pair("",simulate_level(qrels)));
-    arma::vec ideal_utility = get_ideal_utilites(qrels, rank, cache);
-    arma::vec doc_utility = get_doc_utilites(qrels, rankList, rank, cache);
 
-    // Average and None
-    string ptype = "none";
-    vector<double> ave_none = compute_pref_score(doc_utility, ideal_utility, rank, ptype);
-    //vector<double> ave_none = compute_cummulative_pref_scores(doc_utility, ideal_utility, ptype);
-
-    return ave_none[4];
 }
-*/
+
+static map<string, arma::vec> pref_measure(vector<Document> run, Qrels qrels, int rank){
+
+
+    PrefSimulation utility_scores(qrels);
+    map<string, arma::vec> res;
+    //simulationTesting(utility_scores, qrels);
+
+
+    arma::vec ideal_utility_ave = get_ideal_utilites(qrels, utility_scores, rank, "ave");
+    arma::vec doc_utility_ave = get_doc_utilites(qrels, run, utility_scores, rank, "ave");
+
+    arma::vec ave_none = compute_pref_score(doc_utility_ave, ideal_utility_ave, rank, "none");
+    arma::vec ave_RBP = compute_pref_score(doc_utility_ave, ideal_utility_ave, rank, "RBP");
+    arma::vec ave_RR = compute_pref_score(doc_utility_ave, ideal_utility_ave, rank, "RR");
+    arma::vec ave_DCG = compute_pref_score(doc_utility_ave, ideal_utility_ave, rank, "DCG");
+
+    res.insert(make_pair("ave_none", ave_none));
+    res.insert(make_pair("ave_RBP", ave_RBP));
+    res.insert(make_pair("ave_RR", ave_RR));
+    res.insert(make_pair("ave_DCG", ave_DCG));
+
+
+    arma::vec ideal_utility_min = get_ideal_utilites(qrels, utility_scores, rank, "min");
+    arma::vec doc_utility_min = get_doc_utilites(qrels, run, utility_scores, rank, "min");
+
+    arma::vec min_none = compute_pref_score(doc_utility_min, ideal_utility_min, rank, "none");
+    arma::vec min_RBP = compute_pref_score(doc_utility_min, ideal_utility_min, rank, "RBP");
+    arma::vec min_RR = compute_pref_score(doc_utility_min, ideal_utility_min, rank, "RR");
+    arma::vec min_DCG = compute_pref_score(doc_utility_min, ideal_utility_min, rank, "DCG");
+
+    res.insert(make_pair("min_none", min_none));
+    res.insert(make_pair("min_RBP", min_RBP));
+    res.insert(make_pair("min_RR", min_RR));
+    res.insert(make_pair("min_DCG", min_DCG));
+
+    return res;
+}
+
+
+
+
 #endif	/* DIVMEASURES_HPP */
