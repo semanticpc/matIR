@@ -6,9 +6,22 @@
  */
 
 #include "Simulations.hpp"
-PrefSimulation::PrefSimulation(Qrels& qrels): _qrels(qrels){
+PrefSimulation::PrefSimulation(Qrels& qrels)
+    :
+    _qrels(qrels),
+    _qrels_vector(vector<Qrels>())
+{
     _utilScores.insert(make_pair("",simulate_level(vector<int>())));
 }
+
+PrefSimulation::PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector)
+    :
+    _qrels(qrels),
+    _qrels_vector(qrels_vector)
+{
+    _utilScores.insert(make_pair("",simulate_level(vector<int>())));
+}
+
 int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, arma::rowvec seen){
     double alpha = 0.5;
     double scoreA = 0, scoreB = 0;
@@ -26,7 +39,7 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         return 0;
     else{
         // Resolve ties randomly
-        //srand ( time(NULL) );
+        srand ( time(NULL) );
         int number = rand() % 10;
         if( number <= 4)
             return 1;
@@ -37,21 +50,42 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
 
 
 }
-
 arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
+    pair<arma::vec,arma::vec> utils;
+    arma::vec lvl_score = arma::zeros(_qrels.numOfRelDocs);
+    arma::vec appearance_count = arma::zeros(_qrels.numOfRelDocs);;
+    if(_qrels_vector.size() > 0){
+        vector<Qrels>::iterator it;
+        for(it=_qrels_vector.begin(); it != _qrels_vector.end(); it++){
+            utils =get_simulation_scores(*it, rankedDocs);
+            lvl_score += utils.first;
+            appearance_count += utils.second;
+        }
+    }else{
+        utils =get_simulation_scores(_qrels, rankedDocs);
+        lvl_score = utils.first;
+        appearance_count = utils.second;
+    }
 
-    int numOfSubtopics = int(*_qrels.subtopics.rbegin());
+        // Plus One Smoothing to avoid zero utility  scores
+    lvl_score += 1;
+    lvl_score /= (appearance_count + 1);
+    return lvl_score;
+}
+pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, vector<int> rankedDocs){
+
+    int numOfSubtopics = int(*qrels.subtopics.rbegin());
     // Initialize Seen Subtopic Counts
     arma::rowvec seen = arma::zeros<arma::rowvec>(numOfSubtopics);
     for(vector<int>::iterator i= rankedDocs.begin(); i != rankedDocs.end(); i++){
         if((*i) != -1)
-            seen += _qrels.matrix.row((*i));
+            seen += qrels.matrix.row((*i));
     }
 
-    arma::vec lvl_score = arma::zeros(_qrels.relDocs.size());
-    arma::vec appearance_count = arma::zeros(_qrels.relDocs.size());
+    arma::vec lvl_score = arma::zeros(qrels.matrix.n_rows);
+    arma::vec appearance_count = arma::zeros(qrels.matrix.n_rows);
 
-    for(int i=0; i < _qrels.relDocs.size(); i++){
+    for(int i=0; i < qrels.matrix.n_rows; i++){
         // Ignore documents already present in the rank list
         if(find(rankedDocs.begin(), rankedDocs.end(), i) != rankedDocs.end())
             continue;
@@ -62,27 +96,31 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
 
         ;
         // Generate pairs
-        for(int j= i; j < _qrels.relDocs.size(); j++){
+        for(int j= i; j < qrels.matrix.n_rows; j++){
             // Ignore documents already present in the rank list
             if( i == j || (find(rankedDocs.begin(), rankedDocs.end(), j) != rankedDocs.end()) )
                 continue;
 
+            if(arma::sum(_qrels.matrix.row(i)) <= 0)
+                continue;
+
             // Obtain the preference for each pair
+
+
+            // If there are more than one user profile consider them as well
+
             if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
                 lvl_score(i) += 1;
             else
                 lvl_score(j) += 1;
+
 
             appearance_count(i) += 1;
             appearance_count(j) += 1;
         }
     }
 
-
-    // Plus One Smoothing to avoid zero utility  scores
-    lvl_score += 1;
-     lvl_score /= (appearance_count + 1);
-    return lvl_score;
+    return make_pair(lvl_score,appearance_count) ;
 }
 
 

@@ -16,9 +16,11 @@ class PrefSimulation{
 private:
     map<string, arma::vec>  _utilScores;
     Qrels& _qrels;
+    vector<Qrels> _qrels_vector;
 
 private:
     int get_preference(arma::rowvec vectorA, arma::rowvec vectorB, arma::rowvec seen);
+    pair<arma::vec,arma::vec> get_simulation_scores(Qrels &qrels, vector<int> rankedDocs=vector<int>());
     arma::vec simulate_level(vector<int> rankedDocs);
 
 public:
@@ -29,6 +31,8 @@ public:
     //double get_UtilityScore(int docIndex, vector<int> rankedDocs);
 
     PrefSimulation(Qrels& qrels);
+
+    PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector);
 
 };
 #endif	/* SIMULATIONS_HPP */

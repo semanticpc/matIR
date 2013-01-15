@@ -14,6 +14,8 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <regex.h>
+#include <string>
 
 using namespace std;
 
@@ -51,12 +53,60 @@ struct docid_comparison{
 
 struct Qrels{
     int query;
+    int numOfRelDocs;
     map<Document, int, docid_comparison> relDocs;
     set<Document> nonRelDocs;
     set<int> subtopics;
     arma::mat matrix;
+    arma::vec subtopicImportance;
 
 };
+
+
+
+static Qrels update_SubtopicImportance(Qrels& qrels, map<int, double> &_subtopicImportance){
+    Qrels new_qrels;
+    new_qrels.matrix = qrels.matrix;
+    new_qrels.nonRelDocs = qrels.nonRelDocs;
+    new_qrels.relDocs = qrels.relDocs;
+    new_qrels.query = qrels.query;
+    new_qrels.subtopics = qrels.subtopics;
+    new_qrels.subtopicImportance = arma::zeros(qrels.subtopics.size());
+
+    int i =0 ;
+    set<int>::iterator st_it;
+    map<int, double>::iterator find_st;
+    arma::vec subtopicImportance = arma::zeros(qrels.subtopics.size());
+    for(st_it= qrels.subtopics.begin(); st_it != qrels.subtopics.end(); st_it++ ){
+        find_st = _subtopicImportance.find(*st_it);
+        if(find_st != _subtopicImportance.end()){
+            subtopicImportance(i) = find_st->second;
+            new_qrels.subtopicImportance(i) = find_st->second;
+            i++;
+        }
+    }
+    new_qrels.matrix.each_row() %= subtopicImportance;
+    arma::vec rel = arma::sum(new_qrels.matrix, 1);
+
+    new_qrels.numOfRelDocs = arma::sum(rel > arma::zeros(new_qrels.matrix.n_rows));
+    /*new_qrels.matrix = arma::zeros(numOfRelDocs, int(*qrels.subtopics.rbegin()));
+    new_qrels.relDocs.clear();
+    // Update the Matrix and RelDocs as the judgments have changed
+    int doc_index = 0;
+
+    map<Document, int>::iterator doc_iter = qrels.relDocs.begin();
+
+    i = 0;
+    for(;doc_iter != qrels.relDocs.end(); doc_iter++){
+        if(rel(i) > 0){
+            new_qrels.matrix.row(doc_index) = (qrels.matrix.row(i) % new_qrels.subtopicImportance);
+            new_qrels.relDocs.insert(make_pair(doc_iter->first, doc_index));
+            doc_index++;
+        }
+        i++;
+    }*/
+    return new_qrels;
+}
 
 
 
@@ -171,6 +221,8 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
 
                 doc_index++;
             }
+            q.numOfRelDocs = int(q.relDocs.size());
+            q.subtopicImportance = arma::ones(q.subtopics.size());
             qrels.insert(make_pair(curQuery, q));
 
 
@@ -180,6 +232,8 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
             q.nonRelDocs.clear();
             q.relDocs.clear();
             q.query = curQuery;
+            q.numOfRelDocs = 0;
+            q.subtopicImportance.clear();
             relDocuments.clear();
             curQuery = query;
 
@@ -221,6 +275,8 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
 
         doc_index++;
     }
+    q.numOfRelDocs = int(q.relDocs.size());
+    q.subtopicImportance = arma::ones(q.subtopics.size());
     qrels.insert(make_pair(curQuery, q));
 
 
@@ -229,19 +285,86 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
 }
 
 
-static arma::mat judge_diversity(vector<Document> run, Qrels qrels, int rank){
-    arma::mat run_matrix = arma::zeros(std::min(rank, int(run.size())),int(*qrels.subtopics.rbegin()) );
+static arma::mat judge_diversity(vector<Document> &run, Qrels &qrels, int rank){
+
+    arma::mat run_matrix = arma::zeros(rank ,int(*qrels.subtopics.rbegin()) );
     vector<Document>::iterator doc;
     int doc_index = 0;
+    map<Document, int>::iterator doc_iter = qrels.relDocs.begin();
+
     for(doc = run.begin(); doc != run.end(); ++doc ) {
         if(doc_index >= rank) break;
         map<Document, int>::iterator index_iter = qrels.relDocs.find(*doc);
-        if(index_iter != qrels.relDocs.end())
+        if(index_iter != qrels.relDocs.end()){
             run_matrix.row(doc_index) = qrels.matrix.row(int(index_iter->second));
+        }
         doc_index++;
     }
-
     return run_matrix;
+}
+
+static bool checkForDouble(std::string const& s) {
+  std::istringstream ss(s);
+  double d;
+  return (ss >> d) && (ss >> std::ws).eof();
+}
+
+struct Profiles{
+    int query;
+    map<int, double> subtopic_importance;
+};
+static map<int, map<int, Profiles* > > read_userProfiles(string filename){
+    std::ifstream  data(filename.c_str(), ios_base::in);
+    map<int, map<int, Profiles* > > userProfiles;
+    map<int, map<int, Profiles* > >::iterator iter;
+    map<int, Profiles* >::iterator userProfiles_iter;
+    std::string line;
+    while(std::getline(data,line)){
+        std::stringstream  lineStream(line);
+        std::string        cell;
+        int index = 0;
+        int query, subtopic;
+        while(std::getline(lineStream,cell,','))
+        {
+            if(checkForDouble(cell)){
+                if(index == 0){
+                    std::stringstream  lineStream(cell);
+                    std::string value;
+                    std::getline(lineStream,value,'.');
+
+                    query = atoi(value.c_str());
+                    std::getline(lineStream,value,'.');
+                    subtopic = atoi(value.c_str());
+                }
+                else{
+                    userProfiles_iter = userProfiles[index].find(query);
+                    if(userProfiles_iter == userProfiles[index].end()){
+                        Profiles *profile = new Profiles();
+                        profile->query = query;
+                        profile->subtopic_importance.insert(make_pair(subtopic, atof(cell.c_str())));
+                        userProfiles[index].insert(make_pair(query, profile));
+
+                    }else{
+                        userProfiles_iter->second->subtopic_importance.insert(make_pair(subtopic, atof(cell.c_str())));
+
+                    }
+                    //cout << query << "  " << subtopic << " " << cell << endl;
+                }
+                index++;
+            }
+        }
+    }
+    /*for(iter=userProfiles.begin();iter!=userProfiles.end();iter++){
+    for(userProfiles_iter=iter->second.begin();userProfiles_iter!=iter->second.end();userProfiles_iter++){
+        cout << userProfiles_iter->first << ":\n";
+        map<int, double>::iterator st_iter;
+        for(st_iter=userProfiles_iter->second->subtopic_importance.begin();
+                st_iter!=userProfiles_iter->second->subtopic_importance.end(); st_iter++)
+            cout << st_iter->first << " " << st_iter->second << endl;
+        cout << endl;
+    }
+    }*/
+    return userProfiles;
 }
 
 #endif	/* UTILS_HPP */
