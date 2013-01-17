@@ -43,12 +43,12 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
     else{
         // Resolve ties randomly
 
-        //int number = rand() % 10;
-        int number = 5;
+        int number = rand() % 10;
+        //int number = 5;
         if( number < 5)
             return 1;
         else
-            return 1;
+            return 0;
     }
 
 
@@ -94,7 +94,7 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
     arma::vec lvl_score = arma::zeros(qrels.matrix.n_rows);
     arma::vec appearance_count = arma::zeros(qrels.matrix.n_rows);
-
+    srand ( time(NULL) );
     for(int i=0; i < qrels.matrix.n_rows; i++){
         // Ignore documents already present in the rank list
         if(find(rankedDocs.begin(), rankedDocs.end(), i) != rankedDocs.end())

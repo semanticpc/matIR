@@ -101,11 +101,11 @@ static map<int, vector<Document> > readRunFile(string runFileName){
     while(curQuery == query){
         Document d;
         runFile >> d.query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
+
         query = d.query;
         if(curQuery != query) {
             //std::sort(documents.begin(), documents.end());
             run.insert(make_pair(curQuery,documents));
-
             curQuery = query;
             documents.clear();
         }
