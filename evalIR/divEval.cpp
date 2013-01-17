@@ -62,46 +62,31 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     printHeader();
 
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
-        int i =0;
         int query = it->first;
         Qrels qrels = it->second;
         PrefSimulation utility_scores(qrels, vector<Qrels>());
         for(int run_index=0;run_index<runFiles.size();run_index++){
             arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
             cout << query;
-            cout << "," << runFiles.at(i);
+            cout << "," << runFiles.at(run_index);
 
             // Get Subtopic-Recall Score
             arma::vec srecallScore = s_recall(run_matrix, qrels, rank);
             cout << "," << srecallScore(4) << "," << srecallScore(9) << "," << srecallScore(19);
 
-            allScores(i++) += srecallScore(4);
-            allScores(i++) += srecallScore(9);
-            allScores(i++) += srecallScore(19);
-
             // Get Alpha-nDCG Score
             arma::vec andcgScore = andcg(run_matrix, qrels, rank);
             cout << "," << andcgScore(4) << "," << andcgScore(9) << "," << andcgScore(19);
-            allScores(i++) += andcgScore(4);
-            allScores(i++) += andcgScore(9);
-            allScores(i++) += andcgScore(19);
 
             // Get ERR-IA Score
             arma::vec erriaScore = erria(run_matrix, qrels, rank);
             cout << "," << erriaScore(4) << "," << erriaScore(9) << "," << erriaScore(19);
-            allScores(i++) += erriaScore(4);
-            allScores(i++) += erriaScore(9);
-            allScores(i++) += erriaScore(19);
-
 
             // Print all preference measure scores
             map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank, utility_scores);
             for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                          << "," << prefScore_iter->second(19);
-                    allScores(i++) += prefScore_iter->second(4);
-                    allScores(i++) += prefScore_iter->second(9);
-                    allScores(i++) += prefScore_iter->second(19);
             }
             cout << endl;
         }
