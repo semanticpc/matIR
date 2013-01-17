@@ -6,19 +6,22 @@
  */
 
 #include "Simulations.hpp"
-PrefSimulation::PrefSimulation(Qrels& qrels)
+PrefSimulation::PrefSimulation(Qrels& qrels, int error_rate, int missing_rate)
     :
+    _error_rate(error_rate),
+    _missing_rate(missing_rate),
     _qrels(qrels),
-    _qrels_vector(vector<Qrels>())
-{
+    _qrels_vector(vector<Qrels>()){
     _utilScores.insert(make_pair("",simulate_level(vector<int>())));
+
 }
 
-PrefSimulation::PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector)
+PrefSimulation::PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, int error_rate, int missing_rate)
     :
+    _error_rate(error_rate),
+    _missing_rate(missing_rate),
     _qrels(qrels),
-    _qrels_vector(qrels_vector)
-{
+    _qrels_vector(qrels_vector){
     _utilScores.insert(make_pair("",simulate_level(vector<int>())));
 }
 
@@ -39,12 +42,13 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         return 0;
     else{
         // Resolve ties randomly
-        srand ( time(NULL) );
-        int number = rand() % 10;
-        if( number <= 4)
+
+        //int number = rand() % 10;
+        int number = 5;
+        if( number < 5)
             return 1;
         else
-            return 0;
+            return 1;
     }
 
 
@@ -55,8 +59,8 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
     arma::vec lvl_score = arma::zeros(_qrels.numOfRelDocs);
     arma::vec appearance_count = arma::zeros(_qrels.numOfRelDocs);;
     if(_qrels_vector.size() > 0){
-        vector<Qrels>::iterator it;
-        for(it=_qrels_vector.begin(); it != _qrels_vector.end(); it++){
+        vector<Qrels>::iterator it = _qrels_vector.begin();
+        for(; it != _qrels_vector.end(); it++){
             utils =get_simulation_scores(*it, rankedDocs);
             lvl_score += utils.first;
             appearance_count += utils.second;
@@ -67,13 +71,19 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         appearance_count = utils.second;
     }
 
-        // Plus One Smoothing to avoid zero utility  scores
+    // Plus One Smoothing to avoid zero utility  scores
     lvl_score += 1;
     lvl_score /= (appearance_count + 1);
+
+    // All documents in the rank list must get a score of zero
+    for(int i=0;i<rankedDocs.size();i++)
+        lvl_score(rankedDocs.at(i)) = 0.0;
+
+
     return lvl_score;
 }
 pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, vector<int> rankedDocs){
-
+    srand ( time(NULL) );
     int numOfSubtopics = int(*qrels.subtopics.rbegin());
     // Initialize Seen Subtopic Counts
     arma::rowvec seen = arma::zeros<arma::rowvec>(numOfSubtopics);
@@ -105,14 +115,28 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
                 continue;
 
             // Obtain the preference for each pair
-
-
+            //srand ( time(NULL) );
+            //int missing_random_number = (rand() * 1.0 / RAND_MAX) * 100;
+            int missing_random_number = 10;
+            if(missing_random_number > _missing_rate){
             // If there are more than one user profile consider them as well
+                //srand ( time(NULL) );
+                //int eror_random_number = (rand() * 1.0 / RAND_MAX) * 100;
+                int eror_random_number= 10;
+                if(eror_random_number > _error_rate){
+                    if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
+                        lvl_score(i) += 1;
+                    else
+                        lvl_score(j) += 1;
+                }else{
+                    // We are flipping the preference here
+                    if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
+                        lvl_score(j) += 1;
+                    else
+                        lvl_score(i) += 1;
 
-            if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
-                lvl_score(i) += 1;
-            else
-                lvl_score(j) += 1;
+                }
+            }
 
 
             appearance_count(i) += 1;
@@ -146,8 +170,6 @@ double PrefSimulation::get_UtilityScore(int docIndex, int prevDocIndex){
     code = convert.str();
 
     if(docIndex == -1)
-        return 0;
-    else if (docIndex == prevDocIndex)
         return 0;
     else if (docIndex != -1 && prevDocIndex == -1)
         return _utilScores.find("")->second(docIndex);
