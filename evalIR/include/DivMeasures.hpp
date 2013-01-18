@@ -290,7 +290,7 @@ static arma::vec get_doc_utilites(Qrels &qrels, vector<Document> run,
         double totalUtility = 0.0;
         for (int i = 0; i <= k; i++)
                 totalUtility += doc_utility(i);
-        totalUtility = doc_utility(k);
+        //totalUtility = doc_utility(k);
         totalUtility = totalUtility * p_function(k + 1, pType);
 
         double totalIdealUtility = 0.0;
