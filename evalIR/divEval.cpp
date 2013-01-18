@@ -111,6 +111,7 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels)
         int query = it->first;
         Qrels qrels = it->second;
         arma::mat run_matrix = judge_diversity(run.find(query)->second, qrels, rank);
+
         cout << query;
 
         // Get Subtopic-Recall Score

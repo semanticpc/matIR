@@ -35,10 +35,10 @@ struct Document{
     string runid;
 
     bool operator < (const Document& b) const{
-        if (score == b.score){
+        if (rank == b.rank){
             return docid > b.docid;
         }else
-            return score > b.score;
+            return rank < b.rank;
     }
 
 };
@@ -104,7 +104,7 @@ static map<int, vector<Document> > readRunFile(string runFileName){
 
         query = d.query;
         if(curQuery != query) {
-            //std::sort(documents.begin(), documents.end());
+            std::sort(documents.begin(), documents.end());
             run.insert(make_pair(curQuery,documents));
             curQuery = query;
             documents.clear();
@@ -117,7 +117,7 @@ static map<int, vector<Document> > readRunFile(string runFileName){
         }
     }
 
-    //std::sort(documents.begin(), documents.end());
+    std::sort(documents.begin(), documents.end());
     run.insert(make_pair(curQuery,documents));
     return run;
 }
@@ -206,17 +206,23 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
         // If the document was seen before simple add the subtopic
         map<string,Document>::iterator it = relDocuments.find(docid);
         if (it != relDocuments.end()){
-            it->second.subtopics.insert(subtopic);
-            if(q.subtopics.find(subtopic) == q.subtopics.end())
-                q.subtopics.insert(subtopic);
+            if(rel > 0 && subtopic != 0){
+                it->second.subtopics.insert(subtopic);
+                if(q.subtopics.find(subtopic) == q.subtopics.end())
+                        q.subtopics.insert(subtopic);
+            }
         }else{
-            d.subtopics.insert(subtopic);
-            if(q.subtopics.find(subtopic) == q.subtopics.end())
-                q.subtopics.insert(subtopic);
-            if(rel <= 0)
-                q.nonRelDocs.insert(d);
-            else
+
+
+            if(rel > 0){
+                d.subtopics.insert(subtopic);
                 relDocuments.insert(make_pair(docid, d));
+                if(q.subtopics.find(subtopic) == q.subtopics.end())
+                    q.subtopics.insert(subtopic);
+            }
+            else
+                q.nonRelDocs.insert(d);
+
         }
 
         // Check for end of file
