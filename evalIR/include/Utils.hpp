@@ -36,7 +36,7 @@ struct Document{
 
     bool operator < (const Document& b) const{
         if (rank == b.rank){
-            return docid > b.docid;
+            return docid < b.docid;
         }else
             return rank < b.rank;
     }
@@ -47,7 +47,15 @@ struct docid_comparison{
     //string docid;
     //find_doc(string docid) : docid(docid) {}
     bool operator () ( const Document& a, const Document& b ) const{
-        return a.docid > b.docid;
+        return a.docid < b.docid;
+    }
+};
+
+struct strdocid_comparison{
+    //string docid;
+    //find_doc(string docid) : docid(docid) {}
+    bool operator () ( const string& a, const string& b ) const{
+        return a < b;
     }
 };
 
@@ -141,7 +149,7 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
     // Initialize first query
     Qrels q;
     q.relDocs.clear();
-    map<string, Document> relDocuments;
+    map<string, Document, strdocid_comparison> relDocuments;
 
 
     // Read the first line
@@ -173,7 +181,6 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
 
         if(curQuery != query) {
             q.matrix = arma::zeros(int(relDocuments.size()), int(*q.subtopics.rbegin()));
-
             map<string,Document>::iterator doc_it;
             int doc_index = 0;
             for(doc_it = relDocuments.begin(); doc_it != relDocuments.end(); ++doc_it ) {
@@ -233,7 +240,6 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
     }
 
     q.matrix = arma::zeros(int(relDocuments.size()), int(*q.subtopics.rbegin()));
-
     map<string,Document>::iterator doc_it;
     int doc_index = 0;
     for(doc_it = relDocuments.begin(); doc_it != relDocuments.end(); ++doc_it ) {
@@ -276,20 +282,41 @@ static arma::mat judge_diversity(vector<Document> &run, Qrels &qrels, int rank){
 static Qrels update_SubtopicImportance(Qrels& qrels, map<int, double> &_subtopicImportance){
     Qrels new_qrels = qrels;
     new_qrels.subtopicImportance = arma::zeros(qrels.subtopics.size());
+    arma::vec multiplier = arma::zeros(qrels.subtopics.size());
+    int i =0 ;
+    set<int>::iterator st_it;
+    map<int, double>::iterator find_st;
+    for(st_it= qrels.subtopics.begin(); st_it != qrels.subtopics.end(); st_it++ ){
+        find_st = _subtopicImportance.find(*st_it);
+        if(find_st != _subtopicImportance.end()){
+            new_qrels.subtopicImportance(i) = find_st->second;
+            multiplier(i) = 1;
+            i++;
+        }
+    }
+    new_qrels.matrix.each_row() %= multiplier;
+    new_qrels.numOfRelDocs = arma::sum(arma::sum(new_qrels.matrix, 1) >
+                                        arma::zeros(new_qrels.matrix.n_rows));
+    return new_qrels;
+}
+
+
+static Qrels update_SubtopicImportance_binary(Qrels& qrels, map<int, double> &_subtopicImportance){
+    Qrels new_qrels = qrels;
+    new_qrels.subtopicImportance = arma::zeros(qrels.subtopics.size());
 
     int i =0 ;
     set<int>::iterator st_it;
     map<int, double>::iterator find_st;
-    arma::vec subtopicImportance = arma::zeros(qrels.subtopics.size());
     for(st_it= qrels.subtopics.begin(); st_it != qrels.subtopics.end(); st_it++ ){
         find_st = _subtopicImportance.find(*st_it);
         if(find_st != _subtopicImportance.end()){
-            subtopicImportance(i) = find_st->second;
-            new_qrels.subtopicImportance(i) = find_st->second;
+            new_qrels.subtopicImportance(i) = 1;
             i++;
         }
     }
-    new_qrels.matrix.each_row() %= subtopicImportance;
+
+    new_qrels.matrix.each_row() %= new_qrels.subtopicImportance;
     new_qrels.numOfRelDocs = arma::sum(arma::sum(new_qrels.matrix, 1) >
                                         arma::zeros(new_qrels.matrix.n_rows));
     return new_qrels;

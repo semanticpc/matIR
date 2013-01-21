@@ -64,7 +64,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         int i =0;
         int query = it->first;
         Qrels qrels = it->second;
-        PrefSimulation utility_scores(qrels, vector<Qrels>());
+
 
 
 
@@ -87,7 +87,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             new_qrels_vector.push_back(new_qrels);
             numOfProfiles++;
         }
-
+        PrefSimulation utility_scores(qrels, new_qrels_vector);
         for(int run_index=0;run_index<runFiles.size();run_index++){
 
             map<string, arma::vec> prfScore = pref_measure(runs.at(i).find(query)->second, qrels, rank,new_qrels_vector);

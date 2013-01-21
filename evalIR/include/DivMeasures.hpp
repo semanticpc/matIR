@@ -13,6 +13,7 @@
 #include <math.h>
 #include <armadillo>
 #include "Simulations.hpp"
+#include "AdhocMeasures.hpp"
 
 using namespace std;
 
@@ -148,17 +149,58 @@ static arma::vec andcg(arma::mat &run_matrix, Qrels &qrels, int rank, double alp
     return (compute_dcg(run_matrix, rank, alpha) / compute_dcg(ideal_matrix, rank, alpha)) ;
 }
 
+static arma::vec precia(arma::mat &matrix, Qrels &qrels, int rank){
+    arma::vec precia_vector = arma::zeros(rank);
+
+    for (int i = 0; i < rank; i++) {
+        for(int st=0; st < matrix.n_cols; st++){
+            if(qrels.subtopicImportance(st) != 0){
+                precia_vector(i) += (qrels.subtopicImportance(st) *
+                        precision(matrix.col(st), i+1));
+            }
+        }
+    }
+    return precia_vector;
+}
+static arma::vec ndcgia(arma::mat &matrix, Qrels &qrels, int rank){
+    arma::vec ndcgia_vector = arma::zeros(rank);
+    for (int i = 0; i < rank; i++) {
+        double score =0;
+        for(int st=0; st < matrix.n_cols; st++){
+            if(qrels.subtopicImportance(st) > 0)
+                score +=  DCG(matrix.col(st),i) * qrels.subtopicImportance(st) ;
+        }
+        ndcgia_vector(i) = score;
+    }
+    return ndcgia_vector;
+}
+
+
+static arma::vec err_ia(arma::mat &matrix, Qrels &qrels, int rank){
+    arma::vec erria_vector = arma::zeros(rank);
+    for (int i = 0; i < rank; i++) {
+
+        for(int st=0; st < matrix.n_cols; st++){
+            if(qrels.subtopicImportance(st) != 0)
+                erria_vector(i) += (qrels.subtopicImportance(st) * err(matrix.col(st), i));
+                        //nDCG(matrix.col(st), qrels.matrix.col(st), rank));
+        }
+    }
+    return erria_vector;
+}
+
+
 
 static arma::vec erria(arma::mat &matrix, Qrels &qrels, int rank, double alpha=0.5){
     arma::vec erria_vector = arma::zeros(rank);
     int num_of_subtopics = arma::sum(arma::sum(qrels.matrix) > arma::zeros(qrels.matrix.n_cols));
     double erria = 0;
-    arma::rowvec subtopicGain = arma::ones(matrix.n_cols);
+    arma::vec subtopicGain = arma::ones(matrix.n_cols);
     for (int i = 0; i < rank; i++) {
         double score = 0.0;
         for(int st = 0; st < matrix.n_cols ; st++){
             if(matrix(i, st) > 0){
-                score += subtopicGain(st);// * qrels.subtopicImportance(st));
+                score += subtopicGain(st) * qrels.subtopicImportance(st);
                 subtopicGain(st) *= (1 - alpha);
             }
         }
@@ -290,13 +332,11 @@ static arma::vec get_doc_utilites(Qrels &qrels, vector<Document> run,
         double totalUtility = 0.0;
         for (int i = 0; i <= k; i++)
                 totalUtility += doc_utility(i);
-        //totalUtility = doc_utility(k);
         totalUtility = totalUtility * p_function(k + 1, pType);
 
         double totalIdealUtility = 0.0;
         for (int i = 0; i <= k; i++)
             totalIdealUtility += ideal_utility(i);
-        //totalIdealUtility = ideal_utility(k);
         totalIdealUtility = totalIdealUtility * p_function(k + 1,pType);
 
 
@@ -329,7 +369,7 @@ static void simulationTesting(PrefSimulation& utility_scores, Qrels& qrels){
     for(it=qrels.relDocs.begin(); it != qrels.relDocs.end(); it++)
         cout << it->first.docid << " " << it->second << endl;
 
-
+    utility_scores.printCounts();
 
 }
 
@@ -370,7 +410,8 @@ static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels, 
     return res;
 }
 
-static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels, int rank, vector<Qrels> qrel_vector=vector<Qrels>()){
+static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels,
+        int rank, vector<Qrels> qrel_vector=vector<Qrels>()){
     PrefSimulation utility_scores(qrels, qrel_vector);
     return pref_measure(run,qrels,rank,utility_scores);
 }

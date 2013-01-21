@@ -6,22 +6,28 @@
  */
 
 #include "Simulations.hpp"
-PrefSimulation::PrefSimulation(Qrels& qrels, int error_rate, int missing_rate)
+PrefSimulation::PrefSimulation(Qrels& qrels, double error_rate, double missing_rate)
     :
     _error_rate(error_rate),
     _missing_rate(missing_rate),
     _qrels(qrels),
     _qrels_vector(vector<Qrels>()){
+    _error_pairs = 0;
+    _total_pairs = 0;
+    srand ( time(NULL) );
     _utilScores.insert(make_pair("",simulate_level(vector<int>())));
 
 }
 
-PrefSimulation::PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, int error_rate, int missing_rate)
+PrefSimulation::PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, double error_rate, double missing_rate)
     :
     _error_rate(error_rate),
     _missing_rate(missing_rate),
     _qrels(qrels),
     _qrels_vector(qrels_vector){
+    _error_pairs = 0;
+    _total_pairs = 0;
+    srand ( time(NULL) );
     _utilScores.insert(make_pair("",simulate_level(vector<int>())));
 }
 
@@ -73,7 +79,7 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
 
     // Plus One Smoothing to avoid zero utility  scores
     lvl_score += 1;
-    lvl_score /= (appearance_count + 1);
+    lvl_score /= (appearance_count + 2);
 
     // All documents in the rank list must get a score of zero
     for(int i=0;i<rankedDocs.size();i++)
@@ -83,7 +89,7 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
     return lvl_score;
 }
 pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, vector<int> rankedDocs){
-    srand ( time(NULL) );
+
     int numOfSubtopics = int(*qrels.subtopics.rbegin());
     // Initialize Seen Subtopic Counts
     arma::rowvec seen = arma::zeros<arma::rowvec>(numOfSubtopics);
@@ -94,7 +100,6 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
     arma::vec lvl_score = arma::zeros(qrels.matrix.n_rows);
     arma::vec appearance_count = arma::zeros(qrels.matrix.n_rows);
-    srand ( time(NULL) );
     for(int i=0; i < qrels.matrix.n_rows; i++){
         // Ignore documents already present in the rank list
         if(find(rankedDocs.begin(), rankedDocs.end(), i) != rankedDocs.end())
@@ -116,26 +121,31 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
             // Obtain the preference for each pair
             //srand ( time(NULL) );
-            //int missing_random_number = (rand() * 1.0 / RAND_MAX) * 100;
-            int missing_random_number = 10;
-            if(missing_random_number > _missing_rate){
+            int missing_random_number = ((rand() * 1.0 / RAND_MAX) * 100 + 1);
+
+            //cout << missing_random_number << " " << _missing_rate << endl;
+            //int missing_random_number = 10;
+            if(_missing_rate <= missing_random_number){
             // If there are more than one user profile consider them as well
                 //srand ( time(NULL) );
-                //int eror_random_number = (rand() * 1.0 / RAND_MAX) * 100;
-                int eror_random_number= 10;
-                if(eror_random_number > _error_rate){
+                int eror_random_number = ((rand() * 1.0 / RAND_MAX) * 100) + 1;
+                //int eror_random_number= 10;
+                //      cout << eror_random_number << " " << _error_rate << endl;
+                if(eror_random_number >= _error_rate){
                     if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
                         lvl_score(i) += 1;
                     else
                         lvl_score(j) += 1;
                 }else{
                     // We are flipping the preference here
+                    _error_pairs++;
                     if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
                         lvl_score(j) += 1;
                     else
                         lvl_score(i) += 1;
 
                 }
+                _total_pairs++;
             }
 
 
@@ -208,4 +218,8 @@ pair<int, double> PrefSimulation::get_BestUtilityDoc(int prevDocIndex){
             lvl_score.max(index);
             return make_pair(index, arma::max(lvl_score));
     }
+}
+
+void PrefSimulation::printCounts(){
+    cout << "\n Total Pairs : " << _total_pairs << " \nError Pairs : " << _error_pairs << endl;
 }

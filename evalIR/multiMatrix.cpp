@@ -111,31 +111,29 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
     double numOfQ = qrels.size();
     map<int, Qrels>::iterator it;
 
-    cout << "topic,runid";
+    cout << "topic,profileID,runid";
+    cout << ",P-IA@5,P-IA@10,P-IA@20";
+    cout << ",andcg-IA@5,andcg-IA@10,andcg-IA@20";
+    cout << ",erria@5,erria@10,erria@20";
+    cout << ",prf_ave_none@5,prf_ave_none@10,prf_ave_none@20";
+    cout << ",prf_ave_RBP@5,prf_ave_RBP@10,prf_ave_RBP@20";
+    cout << ",prf_ave_RR@5,prf_ave_RR@10,prf_ave_RR@20";
+    cout << ",prf_ave_DCG@5,prf_ave_DCG@10,prf_ave_DCG@20";
 
-    cout << ",prf_ave_none@20";
-    cout << ",prf_ave_RBP@20";
-    cout << ",prf_ave_RR@20";
-    cout << ",prf_ave_DCG@20";
-
-    cout << ",prf_min_none@20";
-    cout << ",prf_min_RBP@20";
-    cout << ",prf_min_RR@20";
-    cout << ",prf_min_DCG@20";
+    cout << ",prf_min_none@5,prf_min_none@10,prf_min_none@20";
+    cout << ",prf_min_RBP@5,prf_min_RBP@10,prf_min_RBP@20";
+    cout << ",prf_min_RR@5,prf_min_RR@10,prf_min_RR@20";
+    cout << ",prf_min_DCG@5,prf_min_DCG@10,prf_min_DCG@20";
     cout << endl;
     // Iterate through each query
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-        cout << query;
-
-
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
         double srecallSum_query = 0, andcgSum_query = 0, erriaSum_query = 0;
         int numOfProfiles = 0;
-        vector<Qrels> new_qrels_vector;
         for(iter=profiles.begin();iter!=profiles.end();iter++){
 
             Qrels new_qrels;
@@ -147,24 +145,33 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 
             if(arma::sum(new_qrels.subtopicImportance) <= 0)
                 continue;
-            new_qrels_vector.push_back(new_qrels);
             arma::mat run_matrix = judge_diversity(run.find(query)->second, new_qrels, rank);
+            new_qrels.matrix.print("qrels");
+            new_qrels.subtopicImportance.print("stimp");
+            run_matrix.print("run");
+            cout << query << "," << numOfProfiles;
+            cout << ",RUN";
+
+
+            arma::vec preciaScore = precia(run_matrix, new_qrels, rank);
+            cout << "," << preciaScore(2) << "," << preciaScore(9) << "," << preciaScore(19);
+
+            arma::vec ndcgiaScore = ndcgia(run_matrix, new_qrels, rank);
+            cout << "," << ndcgiaScore(2) << "," << ndcgiaScore(9) << "," << ndcgiaScore(19);
+
+            arma::vec erriaScore = erria(run_matrix, new_qrels, rank);
+            cout << "," << erriaScore(2) << "," << erriaScore(9) << "," << erriaScore(19);
+
+
+            /*map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank,qrels_vector);
+            map<string, arma::vec>::iterator prefScore_iter;
+            int i =0;
+            for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
+                cout << "," << prefScore_iter->second(rank - 1);
+            prfScoreSum(i++) += prefScore_iter->second(rank - 1);*/
             numOfProfiles++;
-
+            cout << endl;
         }
-
-
-        map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank,new_qrels_vector);
-        map<string, arma::vec>::iterator prefScore_iter;
-        int i =0;
-        for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
-            cout << "," << prefScore_iter->second(rank - 1);
-            prfScoreSum(i++) += prefScore_iter->second(rank - 1);
-        }
-
-        cout << endl;
-        //break;
-
     }
     map<string, arma::vec>::iterator prefScore_iter;
     for(int i =0; i< 8; i ++ )
@@ -202,14 +209,14 @@ int main(int argc, char** argv) {
         }
         else if(strcmp(argv[nextIndex], "-m") == 0 ){
             missing = atof(argv[nextIndex + 1]);
-            nextIndex += 2;
+            nextIndex += 1;
         }
-        else{
-            profilesFile = argv[nextIndex];
+        else if(strcmp(argv[nextIndex], "-profile") == 0 ){
+            profilesFile = argv[nextIndex + 1];
             nextIndex += 1;
         }
     }
-   if ((runFolder == "" && runFile == "") || qrelsFile == ""){
+   if ((runFolder == "" && runFile == "") || qrelsFile == "" || profilesFile == "" ){
         cout << usage;
         exit(0);
    }

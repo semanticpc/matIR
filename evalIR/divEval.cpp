@@ -43,7 +43,7 @@ int getdir (string dir, vector<string> &files)
     return 0;
 }
 
-static void printResultsFolder(string runFolderPath, vector<string> runFiles, map<int, Qrels> qrels){
+static void printResultsFolder(string runFolderPath, vector<string> runFiles, map<int, Qrels> qrels, int e=0, int m= 0){
 
 
     // Iterate through the files and store the results in a vector
@@ -64,7 +64,8 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int query = it->first;
         Qrels qrels = it->second;
-        PrefSimulation utility_scores(qrels, vector<Qrels>());
+
+        PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
         for(int run_index=0;run_index<runFiles.size();run_index++){
             arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
             cout << query;
@@ -93,7 +94,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     }
 }
 
-static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels){
+static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, double m=0, double e =0){
 
 
     double numOfQ = qrels.size();
@@ -111,9 +112,13 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels)
         int query = it->first;
         Qrels qrels = it->second;
         arma::mat run_matrix = judge_diversity(run.find(query)->second, qrels, rank);
-
-        cout << query;
-
+        PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
+        if(e > 0 || m > 0){
+            for(int i=0; i< qrels.matrix.n_rows; i++)
+                utility_scores.get_UtilityScore(0, i);
+        }
+        cout << query << ",sysrun";
+        //run_matrix.print("runs");
         // Get Subtopic-Recall Score
         arma::vec srecallScore = s_recall(run_matrix, qrels, rank);
         cout << "," << srecallScore(4) << "," << srecallScore(9) << "," << srecallScore(19);
@@ -138,7 +143,7 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels)
 
 
         // Print all preference measure scores
-        map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank);
+        map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank, utility_scores);
         for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
                 cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                      << "," << prefScore_iter->second(19);
@@ -151,7 +156,7 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels)
     }
 
     // Print the mean scores for all measures
-    cout << "all";
+    cout << "all,sysrun";
     for(int i =0; i< 33; i ++ ){
         cout << "," << allScores(i)/numOfQ;
     }
@@ -191,7 +196,7 @@ int main(int argc, char** argv) {
         }
         else if(strcmp(argv[nextIndex], "-m") == 0 ){
             missing = atof(argv[nextIndex + 1]);
-            nextIndex += 2;
+            nextIndex += 1;
         }
     }
    if ((runFolder == "" && runFile == "") || qrelsFile == ""){
@@ -200,9 +205,6 @@ int main(int argc, char** argv) {
    }
     // Get Qrels File
     map<int, Qrels> qrels = readDiversityQrelsFile(qrelsFile);
-
-
-
 
     // Judging User Profiles vs Traditional TREC Assessments
     if(runFolder == ""){
@@ -213,7 +215,7 @@ int main(int argc, char** argv) {
     }else{
         vector<string> runFiles;
         getdir(runFolder, runFiles);
-        printResultsFolder(runFolder, runFiles, qrels);
+        printResultsFolder(runFolder, runFiles, qrels,error, missing);
     }
 
 

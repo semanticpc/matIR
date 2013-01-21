@@ -17,8 +17,10 @@ private:
     map<string, arma::vec>  _utilScores;
     Qrels& _qrels;
     vector<Qrels> _qrels_vector;
-    int _missing_rate;
-    int _error_rate;
+    double _missing_rate;
+    double _error_rate;
+    int _error_pairs;
+    int _total_pairs;
 
 private:
     int get_preference(arma::rowvec vectorA, arma::rowvec vectorB, arma::rowvec seen);
@@ -30,11 +32,12 @@ public:
     pair<int, double> get_BestUtilityDoc();
     double get_UtilityScore(int docIndex, int prevDocIndex);
     pair<int, double> get_BestUtilityDoc(int prevDocIndex);
+    void printCounts();
     //double get_UtilityScore(int docIndex, vector<int> rankedDocs);
 
-    PrefSimulation(Qrels& qrels, int error_rate=0, int missing_rate=0);
+    PrefSimulation(Qrels& qrels, double error_rate=0, double missing_rate=0);
 
-    PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, int error_rate=0, int missing_rate=0);
+    PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, double error_rate=0, double missing_rate=0);
 
 };
 #endif	/* SIMULATIONS_HPP */
