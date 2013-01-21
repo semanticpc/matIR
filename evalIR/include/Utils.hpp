@@ -303,17 +303,19 @@ static Qrels update_SubtopicImportance(Qrels& qrels, map<int, double> &_subtopic
 
 static Qrels update_SubtopicImportance_binary(Qrels& qrels, map<int, double> &_subtopicImportance){
     Qrels new_qrels = qrels;
-    new_qrels.subtopicImportance = arma::zeros(qrels.subtopics.size());
+    new_qrels.subtopicImportance = arma::zeros(qrels.matrix.n_cols);
 
-    int i =0 ;
-    set<int>::iterator st_it;
-    map<int, double>::iterator find_st;
-    for(st_it= qrels.subtopics.begin(); st_it != qrels.subtopics.end(); st_it++ ){
-        find_st = _subtopicImportance.find(*st_it);
-        if(find_st != _subtopicImportance.end()){
-            new_qrels.subtopicImportance(i) = 1;
-            i++;
+
+    set<int>::iterator find_st;
+    map<int, double>::iterator st_it;
+    for(st_it= _subtopicImportance.begin(); st_it != _subtopicImportance.end(); st_it++ ){
+
+        find_st = qrels.subtopics.find(st_it->first);
+        if(find_st != qrels.subtopics.end()){
+            if(st_it->second > 0)
+                new_qrels.subtopicImportance(st_it->first - 1) = 1;
         }
+
     }
 
     new_qrels.matrix.each_row() %= new_qrels.subtopicImportance;

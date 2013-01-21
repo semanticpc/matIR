@@ -86,6 +86,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             new_qrels_vector.push_back(new_qrels);
             numOfProfiles++;
 
+
         }
         PrefSimulation utility_scores(qrels, new_qrels_vector);
         for(int i=0; i< qrels.matrix.n_rows; i++)
@@ -133,8 +134,9 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
+        if(query != 2)
+            continue;
         cout << query;
-
 
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
@@ -154,6 +156,7 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
                 continue;
             new_qrels_vector.push_back(new_qrels);
             numOfProfiles++;
+
 
         }
         PrefSimulation utility_scores(qrels, new_qrels_vector);
