@@ -60,12 +60,11 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
 
     printHeader();
 
+// Iterate through each query
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
-        int i =0;
         int query = it->first;
         Qrels qrels = it->second;
-
-
+        int rank = 20;
 
 
         // Iterate user profiles
@@ -78,7 +77,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             Qrels new_qrels;
             map<int, Profiles* >::iterator find_query = iter->second.find(query);
             if(find_query != iter->second.end())
-                new_qrels = update_SubtopicImportance(qrels, find_query->second->subtopic_importance);
+                new_qrels = update_SubtopicImportance_binary(qrels, find_query->second->subtopic_importance);
             else
                 continue;
 
@@ -86,15 +85,25 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                 continue;
             new_qrels_vector.push_back(new_qrels);
             numOfProfiles++;
+
         }
         PrefSimulation utility_scores(qrels, new_qrels_vector);
+        for(int i=0; i< qrels.matrix.n_rows; i++)
+            utility_scores.get_UtilityScore(0, i);
+
+        int i =0;
+        for(int i=0; i< qrels.matrix.n_rows; i++)
+            utility_scores.get_UtilityScore(0, i);
         for(int run_index=0;run_index<runFiles.size();run_index++){
+            cout << query;
+            cout << "," << runFiles.at(run_index);
 
             map<string, arma::vec> prfScore = pref_measure(runs.at(i).find(query)->second, qrels, rank,new_qrels_vector);
             map<string, arma::vec>::iterator prefScore_iter;
             int i =0;
             for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
-                    cout << "," << prefScore_iter->second(rank - 1);
+                    cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
+                         << "," << prefScore_iter->second(19);
             }
             cout << endl;
         }
@@ -137,20 +146,21 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
             Qrels new_qrels;
             map<int, Profiles* >::iterator find_query = iter->second.find(query);
             if(find_query != iter->second.end())
-                new_qrels = update_SubtopicImportance(qrels, find_query->second->subtopic_importance);
+                new_qrels = update_SubtopicImportance_binary(qrels, find_query->second->subtopic_importance);
             else
                 continue;
 
             if(arma::sum(new_qrels.subtopicImportance) <= 0)
                 continue;
             new_qrels_vector.push_back(new_qrels);
-            arma::mat run_matrix = judge_diversity(run.find(query)->second, new_qrels, rank);
             numOfProfiles++;
 
         }
+        PrefSimulation utility_scores(qrels, new_qrels_vector);
+        for(int i=0; i< qrels.matrix.n_rows; i++)
+            utility_scores.get_UtilityScore(0, i);
 
-
-        map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank,new_qrels_vector);
+        map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank, utility_scores);
         map<string, arma::vec>::iterator prefScore_iter;
         int i =0;
         for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
@@ -198,14 +208,14 @@ int main(int argc, char** argv) {
         }
         else if(strcmp(argv[nextIndex], "-m") == 0 ){
             missing = atof(argv[nextIndex + 1]);
-            nextIndex += 2;
+            nextIndex += 1;
         }
-        else{
-            profilesFile = argv[nextIndex];
+        else if(strcmp(argv[nextIndex], "-p") == 0 ){
+            profilesFile = argv[nextIndex + 1];
             nextIndex += 1;
         }
     }
-   if ((runFolder == "" && runFile == "") || qrelsFile == ""){
+   if ((runFolder == "" && runFile == "") || qrelsFile == "" || profilesFile == "" ){
         cout << usage;
         exit(0);
    }
