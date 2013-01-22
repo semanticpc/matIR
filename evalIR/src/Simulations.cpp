@@ -54,7 +54,7 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         if( number < 5)
             return 1;
         else
-            return 0;
+            return 1;
     }
 
 
@@ -67,7 +67,34 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
     if(_qrels_vector.size() > 0){
         vector<Qrels>::iterator it = _qrels_vector.begin();
         for(; it != _qrels_vector.end(); it++){
+            // Check and remove non relevant documents from the rankedDocs
+            vector<int> relevant_rankedDocs;
+
+            for(vector<int>::iterator i= rankedDocs.begin(); i != rankedDocs.end(); i++){
+                if(arma::sum((*it).matrix.row(*i)) > 0){
+                    relevant_rankedDocs.push_back(*i);
+                }
+            }
+
+            if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
+                continue;
+
             utils =get_simulation_scores(*it, rankedDocs);
+
+
+
+
+            for(int i=0; i < (*it).matrix.n_rows; i++){
+                if(arma::sum((*it).matrix.row(i)) > 0){
+                    utils.first(i) += 1;
+                    utils.second(i) += 2;
+                }
+            }
+            //(*it).matrix.print("new matrix");
+            //utils.first.print("utils");
+            // Plus One Smoothing to avoid zero utility  scores
+
+
             lvl_score += utils.first;
             appearance_count += utils.second;
         }
@@ -75,11 +102,12 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         utils =get_simulation_scores(_qrels, rankedDocs);
         lvl_score = utils.first;
         appearance_count = utils.second;
+            // Plus One Smoothing to avoid zero utility  scores
+        lvl_score += 1;
+        lvl_score /= (appearance_count + 2);
     }
 
-    // Plus One Smoothing to avoid zero utility  scores
-    lvl_score += 1;
-    lvl_score /= (appearance_count + 2);
+
 
     // All documents in the rank list must get a score of zero
     for(int i=0;i<rankedDocs.size();i++)
@@ -109,14 +137,15 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
         double score = 0.0;
         int appearance = 0;
 
-        ;
+        if(arma::sum(qrels.matrix.row(i)) <= 0)
+            continue;
         // Generate pairs
         for(int j= i; j < qrels.matrix.n_rows; j++){
             // Ignore documents already present in the rank list
             if( i == j || (find(rankedDocs.begin(), rankedDocs.end(), j) != rankedDocs.end()) )
                 continue;
 
-            if(arma::sum(_qrels.matrix.row(i)) <= 0)
+            if(arma::sum(qrels.matrix.row(j)) <= 0)
                 continue;
 
             // Obtain the preference for each pair
@@ -132,14 +161,14 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
                 //int eror_random_number= 10;
                 //      cout << eror_random_number << " " << _error_rate << endl;
                 if(eror_random_number >= _error_rate){
-                    if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
+                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
                         lvl_score(i) += 1;
                     else
                         lvl_score(j) += 1;
                 }else{
                     // We are flipping the preference here
                     _error_pairs++;
-                    if(get_preference(_qrels.matrix.row(i), _qrels.matrix.row(j), seen) == 1)
+                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
                         lvl_score(j) += 1;
                     else
                         lvl_score(i) += 1;

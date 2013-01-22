@@ -134,8 +134,6 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-        if(query != 2)
-            continue;
         cout << query;
 
         // Iterate user profiles
@@ -143,6 +141,9 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         double srecallSum_query = 0, andcgSum_query = 0, erriaSum_query = 0;
         int numOfProfiles = 0;
         vector<Qrels> new_qrels_vector;
+        //qrels.matrix.print("qrels");
+        //arma::mat run_matrix = judge_diversity(run.find(query)->second, qrels, rank);
+        //run_matrix.print("run");
         for(iter=profiles.begin();iter!=profiles.end();iter++){
 
             Qrels new_qrels;
@@ -154,7 +155,9 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 
             if(arma::sum(new_qrels.subtopicImportance) <= 0)
                 continue;
+            //new_qrels.subtopicImportance.print("st imp");
             new_qrels_vector.push_back(new_qrels);
+
             numOfProfiles++;
 
 
