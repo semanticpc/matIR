@@ -54,7 +54,7 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         if( number < 5)
             return 1;
         else
-            return 1;
+            return 0;
     }
 
 
@@ -76,8 +76,8 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
                 }
             }
 
-            if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
-                continue;
+            //if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
+                //continue;
 
             utils =get_simulation_scores(*it, rankedDocs);
 
@@ -98,6 +98,7 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
             lvl_score += utils.first;
             appearance_count += utils.second;
         }
+        lvl_score /= appearance_count;
     }else{
         utils =get_simulation_scores(_qrels, rankedDocs);
         lvl_score = utils.first;

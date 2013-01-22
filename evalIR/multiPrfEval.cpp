@@ -134,6 +134,8 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
+        //if(query != 30)
+            //continue
         cout << query;
 
         // Iterate user profiles
