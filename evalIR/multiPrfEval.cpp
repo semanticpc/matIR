@@ -92,16 +92,13 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         for(int i=0; i< qrels.matrix.n_rows; i++)
             utility_scores.get_UtilityScore(0, i);
 
-        int i =0;
-        for(int i=0; i< qrels.matrix.n_rows; i++)
-            utility_scores.get_UtilityScore(0, i);
+
         for(int run_index=0;run_index<runFiles.size();run_index++){
             cout << query;
             cout << "," << runFiles.at(run_index);
 
-            map<string, arma::vec> prfScore = pref_measure(runs.at(i).find(query)->second, qrels, rank,new_qrels_vector);
+            map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank,new_qrels_vector);
             map<string, arma::vec>::iterator prefScore_iter;
-            int i =0;
             for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                          << "," << prefScore_iter->second(19);
