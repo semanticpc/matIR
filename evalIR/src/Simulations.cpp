@@ -68,16 +68,16 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         vector<Qrels>::iterator it = _qrels_vector.begin();
         for(; it != _qrels_vector.end(); it++){
             // Check and remove non relevant documents from the rankedDocs
-            vector<int> relevant_rankedDocs;
+            //vector<int> relevant_rankedDocs;
 
-            for(vector<int>::iterator i= rankedDocs.begin(); i != rankedDocs.end(); i++){
+            /*for(vector<int>::iterator i= rankedDocs.begin(); i != rankedDocs.end(); i++){
                 if(arma::sum((*it).matrix.row(*i)) > 0){
                     relevant_rankedDocs.push_back(*i);
                 }
             }
 
-            //if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
-                //continue;
+            if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
+                //continue;*/
 
             utils =get_simulation_scores(*it, rankedDocs);
 
