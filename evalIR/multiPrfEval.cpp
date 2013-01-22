@@ -184,7 +184,7 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 }
 
 int main(int argc, char** argv) {
-    string usage = "Usage:\n\t divEval <qrels_file> <run_file>\n";
+    string usage = "Usage:\n\t multiPrfEval -q <qrels_file> -r <run_file> -p <profile_file>\n";
     if (argc < 3){
         cout << usage;
         exit(0);

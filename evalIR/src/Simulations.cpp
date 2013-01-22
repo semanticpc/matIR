@@ -67,34 +67,13 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
     if(_qrels_vector.size() > 0){
         vector<Qrels>::iterator it = _qrels_vector.begin();
         for(; it != _qrels_vector.end(); it++){
-            // Check and remove non relevant documents from the rankedDocs
-            //vector<int> relevant_rankedDocs;
-
-            /*for(vector<int>::iterator i= rankedDocs.begin(); i != rankedDocs.end(); i++){
-                if(arma::sum((*it).matrix.row(*i)) > 0){
-                    relevant_rankedDocs.push_back(*i);
-                }
-            }
-
-            if(rankedDocs.size() > 0 && relevant_rankedDocs.size() <= 0)
-                //continue;*/
-
             utils =get_simulation_scores(*it, rankedDocs);
-
-
-
-
             for(int i=0; i < (*it).matrix.n_rows; i++){
                 if(arma::sum((*it).matrix.row(i)) > 0){
                     utils.first(i) += 1;
                     utils.second(i) += 2;
                 }
             }
-            //(*it).matrix.print("new matrix");
-            //utils.first.print("utils");
-            // Plus One Smoothing to avoid zero utility  scores
-
-
             lvl_score += utils.first;
             appearance_count += utils.second;
         }
@@ -150,17 +129,9 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
                 continue;
 
             // Obtain the preference for each pair
-            //srand ( time(NULL) );
             int missing_random_number = ((rand() * 1.0 / RAND_MAX) * 100 + 1);
-
-            //cout << missing_random_number << " " << _missing_rate << endl;
-            //int missing_random_number = 10;
             if(_missing_rate <= missing_random_number){
-            // If there are more than one user profile consider them as well
-                //srand ( time(NULL) );
                 int eror_random_number = ((rand() * 1.0 / RAND_MAX) * 100) + 1;
-                //int eror_random_number= 10;
-                //      cout << eror_random_number << " " << _error_rate << endl;
                 if(eror_random_number >= _error_rate){
                     if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
                         lvl_score(i) += 1;
