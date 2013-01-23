@@ -69,11 +69,12 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         Qrels qrels = it->second;
 
         PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
-        for(int run_index=0;run_index<runFiles.size();run_index++){
-            if(e > 0 || m > 0){
-                for(int i=0; i< qrels.matrix.n_rows; i++)
+        if(e > 0 || m > 0){
+            for(int i=0; i< qrels.matrix.n_rows; i++)
                 utility_scores.get_UtilityScore(0, i);
-            }
+        }
+        for(int run_index=0;run_index<runFiles.size();run_index++){
+
             arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
             cout << query;
             cout << "," << runFiles.at(run_index);
@@ -100,7 +101,6 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                 cout << "," << utility_scores.getTotalPairs() << "," << utility_scores.getTotalRelDocs() << endl;
             else
                 cout << endl;
-
         }
     }
 }
@@ -131,7 +131,10 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
             for(int i=0; i< qrels.matrix.n_rows; i++)
                 utility_scores.get_UtilityScore(0, i);
         }
+        //if(query != 19)
+          //  continue;
         cout << query << ",sysrun";
+        //qrels.matrix.print("qrels");
         //run_matrix.print("runs");
         // Get Subtopic-Recall Score
         arma::vec srecallScore = s_recall(run_matrix, qrels, rank);

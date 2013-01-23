@@ -343,7 +343,8 @@ static arma::vec get_doc_utilites(Qrels &qrels, vector<Document> run,
         cummulativeScore += totalUtility;//((totalUtility / totalIdealUtility) * p_function(k + 1, pType))  ;
         cummulativeIdealScore += totalIdealUtility;
         //cout << totalUtility << " " << totalIdealUtility <<  " " <<  p_function(k + 1, pType) << " " <<  cummulativeScore/ (k+1) << endl;
-        pref_score(k) =((cummulativeScore / cummulativeIdealScore) ); // cummulativeScore/ (k+1);
+        if (cummulativeScore != 0 && cummulativeIdealScore != 0)
+            pref_score(k) =((cummulativeScore / cummulativeIdealScore) ); // cummulativeScore/ (k+1);
     }
     return pref_score;
 

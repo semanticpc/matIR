@@ -86,10 +86,10 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         for(int i=0; i < _qrels.matrix.n_rows; i++){
             if(appearance_count(i) > 0){
                 lvl_score(i) += 1;
-                appearance_count(i) += 2;
+                //appearance_count(i) += 2;
             }
         }
-        lvl_score /= appearance_count;
+        lvl_score /= (appearance_count+2);
 
     }
 
@@ -155,9 +155,6 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
                 appearance_count(i) += 1;
                 appearance_count(j) += 1;
             }
-
-
-
         }
     }
 
