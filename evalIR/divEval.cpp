@@ -23,7 +23,7 @@ static void printHeader(){
     cout << ",prf_min_RBP@5,prf_min_RBP@10,prf_min_RBP@20";
     cout << ",prf_min_RR@5,prf_min_RR@10,prf_min_RR@20";
     cout << ",prf_min_DCG@5,prf_min_DCG@10,prf_min_DCG@20";
-    cout << endl;
+
 }
 
 int getdir (string dir, vector<string> &files)
@@ -60,13 +60,20 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     arma::vec allScores = arma::zeros(33);
 
     printHeader();
+    if(e > 0 || m > 0)
+        cout << ",TotalPairs, TotalRelDocs";
 
+    cout << endl;
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int query = it->first;
         Qrels qrels = it->second;
 
         PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
         for(int run_index=0;run_index<runFiles.size();run_index++){
+            if(e > 0 || m > 0){
+                for(int i=0; i< qrels.matrix.n_rows; i++)
+                utility_scores.get_UtilityScore(0, i);
+            }
             arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
             cout << query;
             cout << "," << runFiles.at(run_index);
@@ -89,12 +96,16 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                          << "," << prefScore_iter->second(19);
             }
-            cout << endl;
+            if(e > 0 || m > 0)
+                cout << "," << utility_scores.getTotalPairs() << "," << utility_scores.getTotalRelDocs() << endl;
+            else
+                cout << endl;
+
         }
     }
 }
 
-static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, double m=0, double e =0){
+static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, double e=0, double m=0){
 
 
     double numOfQ = qrels.size();
@@ -106,7 +117,10 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
     arma::vec allScores = arma::zeros(33);
 
     printHeader();
+    if(e > 0 || m > 0)
+        cout << ",TotalPairs, TotalRelDocs";
 
+    cout << endl;
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int i =0;
         int query = it->first;
@@ -151,7 +165,10 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
                 allScores(i++) += prefScore_iter->second(9);
                 allScores(i++) += prefScore_iter->second(19);
         }
-        cout << endl;
+        if(e > 0 || m > 0)
+            cout << "," << utility_scores.getTotalPairs() << "," << utility_scores.getTotalRelDocs() << endl;
+        else
+            cout << endl;
 
     }
 
@@ -210,7 +227,7 @@ int main(int argc, char** argv) {
     if(runFolder == ""){
         // Read the run file
         map<int, vector<Document> > run = readRunFile(runFile);
-        printResults(run, qrels);
+        printResults(run, qrels, error, missing);
 
     }else{
         vector<string> runFiles;

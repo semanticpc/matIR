@@ -13,7 +13,6 @@ using namespace std;
 static void printHeader(){
     cout << "topic,profileID,runid";
     cout << ",srecall@5,srecall@10,srecall@20";
-    cout << ",P-IA@5,P-IA@10,P-IA@20";
     cout << ",andcg-IA@5,andcg-IA@10,andcg-IA@20";
     cout << ",erria@5,erria@10,erria@20";
     cout << ",prf_ave_none@5,prf_ave_none@10,prf_ave_none@20";

@@ -83,8 +83,14 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         lvl_score = utils.first;
         appearance_count = utils.second;
             // Plus One Smoothing to avoid zero utility  scores
-        lvl_score += 1;
-        lvl_score /= (appearance_count + 2);
+        for(int i=0; i < _qrels.matrix.n_rows; i++){
+            if(appearance_count(i) > 0){
+                lvl_score(i) += 1;
+                appearance_count(i) += 2;
+            }
+        }
+        lvl_score /= appearance_count;
+
     }
 
 
@@ -92,7 +98,6 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
     // All documents in the rank list must get a score of zero
     for(int i=0;i<rankedDocs.size();i++)
         lvl_score(rankedDocs.at(i)) = 0.0;
-
 
     return lvl_score;
 }
@@ -130,7 +135,7 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
             // Obtain the preference for each pair
             int missing_random_number = ((rand() * 1.0 / RAND_MAX) * 100 + 1);
-            if(_missing_rate <= missing_random_number){
+            if(_missing_rate < missing_random_number){
                 int eror_random_number = ((rand() * 1.0 / RAND_MAX) * 100) + 1;
                 if(eror_random_number >= _error_rate){
                     if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
@@ -147,11 +152,12 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
                 }
                 _total_pairs++;
+                appearance_count(i) += 1;
+                appearance_count(j) += 1;
             }
 
 
-            appearance_count(i) += 1;
-            appearance_count(j) += 1;
+
         }
     }
 
@@ -223,4 +229,12 @@ pair<int, double> PrefSimulation::get_BestUtilityDoc(int prevDocIndex){
 
 void PrefSimulation::printCounts(){
     cout << "\n Total Pairs : " << _total_pairs << " \nError Pairs : " << _error_pairs << endl;
+}
+
+int PrefSimulation::getTotalPairs(){
+    return _total_pairs;
+}
+
+int PrefSimulation::getTotalRelDocs(){
+    return _qrels.matrix.n_rows;
 }
