@@ -65,8 +65,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-        cout << query;
-
+        
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
         int numOfProfiles = 0;
