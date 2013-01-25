@@ -8,6 +8,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 using namespace std;
 
 static void printHeader(){
@@ -23,7 +25,7 @@ static void printHeader(){
     cout << ",prf_min_RBP@5,prf_min_RBP@10,prf_min_RBP@20";
     cout << ",prf_min_RR@5,prf_min_RR@10,prf_min_RR@20";
     cout << ",prf_min_DCG@5,prf_min_DCG@10,prf_min_DCG@20";
-
+    cout << endl;
 }
 
 int getdir (string dir, vector<string> &files)
@@ -60,10 +62,6 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     arma::vec allScores = arma::zeros(33);
 
     printHeader();
-    if(e > 0 || m > 0)
-        cout << ",TotalPairs, TotalRelDocs";
-
-    cout << endl;
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int query = it->first;
         Qrels qrels = it->second;
@@ -105,6 +103,38 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
     }
 }
 
+static void printIdeal(map<int, Qrels> qrels, double e=0, double m=0){
+
+
+    double numOfQ = qrels.size();
+    map<int, Qrels>::iterator it;
+    map<string, arma::vec>::iterator prefScore_iter;
+    int rank = 20;
+
+    // Initialize variable to keep track of the sum of scores
+    arma::vec allScores = arma::zeros(33);
+
+    for ( it=qrels.begin() ; it != qrels.end(); it++ ){
+        int i =0;
+        int query = it->first;
+        Qrels qrels = it->second;
+        if(query != 15)
+            continue;
+        PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
+        if(e > 0 || m > 0){
+            for(int i=0; i< qrels.matrix.n_rows; i++)
+                utility_scores.get_UtilityScore(0, i);
+        }
+
+        // Print all preference measure scores
+        pref_measure_printIdeal(qrels, rank, utility_scores, e ,m );
+
+    }
+
+}
+
+
+
 static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, double e=0, double m=0){
 
 
@@ -117,25 +147,21 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
     arma::vec allScores = arma::zeros(33);
 
     printHeader();
-    if(e > 0 || m > 0)
-        cout << ",TotalPairs, TotalRelDocs";
 
-    cout << endl;
+
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int i =0;
         int query = it->first;
         Qrels qrels = it->second;
+
         arma::mat run_matrix = judge_diversity(run.find(query)->second, qrels, rank);
         PrefSimulation utility_scores(qrels, vector<Qrels>(), e, m);
         if(e > 0 || m > 0){
             for(int i=0; i< qrels.matrix.n_rows; i++)
                 utility_scores.get_UtilityScore(0, i);
         }
-        //if(query != 19)
-          //  continue;
+
         cout << query << ",sysrun";
-        //qrels.matrix.print("qrels");
-        //run_matrix.print("runs");
         // Get Subtopic-Recall Score
         arma::vec srecallScore = s_recall(run_matrix, qrels, rank);
         cout << "," << srecallScore(4) << "," << srecallScore(9) << "," << srecallScore(19);
@@ -192,7 +218,7 @@ int main(int argc, char** argv) {
         cout << usage;
         exit(0);
     }
-    string qrelsFile, runFile = "", runFolder;
+    string qrelsFile,qrelsFile_ideal, runFile = "", runFolder;
     string profilesFile = "";
     double error, missing;
     //int nextIndex = 3;
@@ -201,7 +227,11 @@ int main(int argc, char** argv) {
         if(strcmp(argv[nextIndex], "-q") == 0){
             qrelsFile = argv[nextIndex + 1];
             nextIndex += 1;
+        }else if(strcmp(argv[nextIndex], "-qi") == 0){
+            qrelsFile_ideal = argv[nextIndex + 1];
+            nextIndex += 1;
         }
+
         else if(strcmp(argv[nextIndex], "-rf") == 0){
             runFolder = argv[nextIndex + 1];
             nextIndex += 1;
@@ -219,6 +249,12 @@ int main(int argc, char** argv) {
             nextIndex += 1;
         }
     }
+    if(qrelsFile_ideal != ""){
+        map<int, Qrels> qrels = readDiversityQrelsFile(qrelsFile_ideal);
+        printIdeal(qrels, error, missing);
+        exit(0);
+    }
+
    if ((runFolder == "" && runFile == "") || qrelsFile == ""){
         cout << usage;
         exit(0);

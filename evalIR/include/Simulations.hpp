@@ -35,10 +35,8 @@ public:
     void printCounts();
     int getTotalRelDocs();
     int getTotalPairs();
-    //double get_UtilityScore(int docIndex, vector<int> rankedDocs);
 
     PrefSimulation(Qrels& qrels, double error_rate=0, double missing_rate=0);
-
     PrefSimulation(Qrels& qrels, vector<Qrels> qrels_vector, double error_rate=0, double missing_rate=0);
 
 };

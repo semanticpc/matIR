@@ -6,6 +6,7 @@
  */
 
 #include "Simulations.hpp"
+#include <algorithm>    // std::random_shuffle
 PrefSimulation::PrefSimulation(Qrels& qrels, double error_rate, double missing_rate)
     :
     _error_rate(error_rate),
@@ -48,13 +49,11 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         return 0;
     else{
         // Resolve ties randomly
-
         int number = rand() % 10;
-        //int number = 5;
         if( number < 5)
             return 1;
         else
-            return 0;
+            return 1;
     }
 
 
@@ -82,18 +81,15 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         utils =get_simulation_scores(_qrels, rankedDocs);
         lvl_score = utils.first;
         appearance_count = utils.second;
-            // Plus One Smoothing to avoid zero utility  scores
+        // Add one only to relevant documents
         for(int i=0; i < _qrels.matrix.n_rows; i++){
             if(appearance_count(i) > 0){
                 lvl_score(i) += 1;
-                //appearance_count(i) += 2;
             }
         }
         lvl_score /= (appearance_count+2);
 
     }
-
-
 
     // All documents in the rank list must get a score of zero
     for(int i=0;i<rankedDocs.size();i++)
@@ -113,7 +109,8 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
 
     arma::vec lvl_score = arma::zeros(qrels.matrix.n_rows);
     arma::vec appearance_count = arma::zeros(qrels.matrix.n_rows);
-    for(int i=0; i < qrels.matrix.n_rows; i++){
+
+    for(int i= 0; i < qrels.matrix.n_rows; i++){
         // Ignore documents already present in the rank list
         if(find(rankedDocs.begin(), rankedDocs.end(), i) != rankedDocs.end())
             continue;
@@ -126,6 +123,7 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
             continue;
         // Generate pairs
         for(int j= i; j < qrels.matrix.n_rows; j++){
+
             // Ignore documents already present in the rank list
             if( i == j || (find(rankedDocs.begin(), rankedDocs.end(), j) != rankedDocs.end()) )
                 continue;
@@ -138,14 +136,14 @@ pair<arma::vec,arma::vec> PrefSimulation::get_simulation_scores(Qrels &qrels, ve
             if(_missing_rate < missing_random_number){
                 int eror_random_number = ((rand() * 1.0 / RAND_MAX) * 100) + 1;
                 if(eror_random_number >= _error_rate){
-                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
+                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen))
                         lvl_score(i) += 1;
                     else
                         lvl_score(j) += 1;
-                }else{
+                }else {
                     // We are flipping the preference here
                     _error_pairs++;
-                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen) == 1)
+                    if(get_preference(qrels.matrix.row(i), qrels.matrix.row(j), seen))
                         lvl_score(j) += 1;
                     else
                         lvl_score(i) += 1;

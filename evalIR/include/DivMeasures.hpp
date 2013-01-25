@@ -247,17 +247,32 @@ static double p_function(int rank, string type){
 
 
 static arma::vec get_ideal_utilites(Qrels &qrels, PrefSimulation &utility_scores,
-                                                        int rank, string fType){
+                                    int rank, string fType, string printRunID=""){
 
     arma::vec ideal_utility = arma::zeros(rank);
     vector<int> rankList_docIndex;
     // Get the document utilities
+    double cumScore;
     for (int i = 0; i < rank; i++) {
         // Get Ideal Document at rank 1
         if(i == 0){
             pair<int, double> bestDoc = utility_scores.get_BestUtilityDoc();
             ideal_utility(i) = bestDoc.second;
             rankList_docIndex.push_back(bestDoc.first);
+            cumScore = bestDoc.second;
+            if(printRunID != ""&& bestDoc.first != -1){
+                map<Document, int>::iterator it;
+                string docid_str = "";
+                for(it=qrels.relDocs.begin(); it != qrels.relDocs.end(); it++){
+                    if(bestDoc.first == it->second){
+                        docid_str = it->first.docid;
+                        break;
+                    }
+
+                }
+
+                cout << qrels.query << " Q0 " << docid_str << " " << i+1 << " " << float(cumScore * 1) << " " << printRunID << endl;
+            }
         } else{
             double max_utility = 0;
             int max_doc = -1;
@@ -277,6 +292,22 @@ static arma::vec get_ideal_utilites(Qrels &qrels, PrefSimulation &utility_scores
             }
             ideal_utility(i) = max_utility;
             rankList_docIndex.push_back(max_doc);
+
+            cumScore = max_utility;
+            if(printRunID != "" && max_doc != -1){
+                map<Document, int>::iterator it;
+                string docid_str = "";
+                for(it=qrels.relDocs.begin(); it != qrels.relDocs.end(); it++){
+                    if(max_doc == it->second){
+                        docid_str = it->first.docid;
+                        break;
+                    }
+
+                }
+
+                cout << qrels.query << " Q0 " << docid_str << " " << i+1 << " " << float(cumScore * 1) << " " << printRunID << endl;
+            }
+
         }
 
     }
@@ -342,7 +373,7 @@ static arma::vec get_doc_utilites(Qrels &qrels, vector<Document> run,
 
         cummulativeScore += totalUtility;//((totalUtility / totalIdealUtility) * p_function(k + 1, pType))  ;
         cummulativeIdealScore += totalIdealUtility;
-        //cout << totalUtility << " " << totalIdealUtility <<  " " <<  p_function(k + 1, pType) << " " <<  cummulativeScore/ (k+1) << endl;
+        //cout << k << " -- " << totalUtility << " " << totalIdealUtility <<  " ||  " <<  cummulativeScore << " " <<  cummulativeIdealScore << endl;
         if (cummulativeScore != 0 && cummulativeIdealScore != 0)
             pref_score(k) =((cummulativeScore / cummulativeIdealScore) ); // cummulativeScore/ (k+1);
     }
@@ -353,9 +384,15 @@ static arma::vec get_doc_utilites(Qrels &qrels, vector<Document> run,
 static void simulationTesting(PrefSimulation& utility_scores, Qrels& qrels){
     cout << endl;
     cout << endl;
+    set<double> classes;
     for(int i=0; i< qrels.matrix.n_rows; i++){
         cout << i << " " << utility_scores.get_UtilityScore(i) << endl;
+        if(classes.find(utility_scores.get_UtilityScore(i)) == classes.end())
+            classes.insert(utility_scores.get_UtilityScore(i));
     }
+    cout << endl << qrels.query << " " << classes.size() << endl;
+
+
     for(int k=0; k< qrels.matrix.n_rows; k++){
     cout << endl;
     cout << endl;
@@ -418,6 +455,13 @@ static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels,
 }
 
 
+
+static void pref_measure_printIdeal(Qrels& qrels, int rank, PrefSimulation &utility_scores, int e , int m){
+    //simulationTesting(utility_scores, qrels);
+    std::stringstream printRunID;
+    printRunID << "ideal-e" << e << "m" << m << ".res";
+    arma::vec ideal_utility_ave = get_ideal_utilites(qrels, utility_scores, rank, "ave", printRunID.str());
+}
 
 
 #endif	/* DIVMEASURES_HPP */

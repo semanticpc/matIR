@@ -104,12 +104,9 @@ static map<int, vector<Document> > readRunFile(string runFileName){
     curQuery = d.query;
     documents.push_back(d);
 
-
-
     while(curQuery == query){
         Document d;
         runFile >> d.query >> q0 >> d.docid >> d.rank >> d.score >> d.runid;
-
         query = d.query;
         if(curQuery != query) {
             std::sort(documents.begin(), documents.end());
@@ -162,6 +159,7 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
 
     curQuery = query;
     q.query = curQuery;
+    q.subtopics.insert(subtopic);
 
     // Add the document to the relevant or non-relevant list
     if(rel <= 0)
@@ -197,7 +195,7 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
             qrels.insert(make_pair(curQuery, q));
 
 
-
+            curQuery = query;
             q.matrix.reset();
             q.subtopics.clear();
             q.nonRelDocs.clear();
@@ -206,7 +204,7 @@ static map<int, Qrels> readDiversityQrelsFile(string qrelsFileName){
             q.numOfRelDocs = 0;
             q.subtopicImportance.clear();
             relDocuments.clear();
-            curQuery = query;
+
 
         }
 
@@ -309,7 +307,6 @@ static Qrels update_SubtopicImportance_binary(Qrels& qrels, map<int, double> &_s
     set<int>::iterator find_st;
     map<int, double>::iterator st_it;
     for(st_it= _subtopicImportance.begin(); st_it != _subtopicImportance.end(); st_it++ ){
-
         find_st = qrels.subtopics.find(st_it->first);
         if(find_st != qrels.subtopics.end()){
             if(st_it->second > 0)

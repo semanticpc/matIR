@@ -114,35 +114,20 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
     double numOfQ = qrels.size();
     map<int, Qrels>::iterator it;
 
-    cout << "topic,runid";
 
-    cout << ",prf_ave_none@20";
-    cout << ",prf_ave_RBP@20";
-    cout << ",prf_ave_RR@20";
-    cout << ",prf_ave_DCG@20";
-
-    cout << ",prf_min_none@20";
-    cout << ",prf_min_RBP@20";
-    cout << ",prf_min_RR@20";
-    cout << ",prf_min_DCG@20";
-    cout << endl;
+    printHeader();
     // Iterate through each query
     for ( it=qrels.begin() ; it != qrels.end(); it++ ){
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-        //if(query != 30)
-            //continue
-        cout << query;
+        cout << query << ",sysrun";
 
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
-        double srecallSum_query = 0, andcgSum_query = 0, erriaSum_query = 0;
         int numOfProfiles = 0;
         vector<Qrels> new_qrels_vector;
-        //qrels.matrix.print("qrels");
-        //arma::mat run_matrix = judge_diversity(run.find(query)->second, qrels, rank);
-        //run_matrix.print("run");
+
         for(iter=profiles.begin();iter!=profiles.end();iter++){
 
             Qrels new_qrels;
@@ -154,9 +139,7 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 
             if(arma::sum(new_qrels.subtopicImportance) <= 0)
                 continue;
-            //new_qrels.subtopicImportance.print("st imp");
             new_qrels_vector.push_back(new_qrels);
-
             numOfProfiles++;
 
 
@@ -167,20 +150,11 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 
         map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank, utility_scores);
         map<string, arma::vec>::iterator prefScore_iter;
-        int i =0;
-        for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
-            cout << "," << prefScore_iter->second(rank - 1);
-            prfScoreSum(i++) += prefScore_iter->second(rank - 1);
-        }
-
+        for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ )
+                cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
+                     << "," << prefScore_iter->second(19);
         cout << endl;
-        //break;
-
     }
-    map<string, arma::vec>::iterator prefScore_iter;
-    for(int i =0; i< 8; i ++ )
-            cout << "," << prfScoreSum(i)/numOfQ;
-    cout << endl;
 }
 
 int main(int argc, char** argv) {
