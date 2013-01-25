@@ -92,7 +92,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             PrefSimulation utility_scores(new_qrels, vector<Qrels>(), 0, 0);
 
             for(int run_index=0;run_index<runFiles.size();run_index++){
-                arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
+                arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, new_qrels, rank);
                 cout << query;
                 cout << "," << runFiles.at(run_index) << "," << numOfProfiles+1;
 
