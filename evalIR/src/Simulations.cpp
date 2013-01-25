@@ -53,7 +53,7 @@ int PrefSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, a
         if( number < 5)
             return 1;
         else
-            return 1;
+            return 0;
     }
 
 
