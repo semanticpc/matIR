@@ -97,7 +97,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             cout << query;
             cout << "," << runFiles.at(run_index);
 
-            map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank,new_qrels_vector);
+            map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank,utility_scores);
             map<string, arma::vec>::iterator prefScore_iter;
             for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
