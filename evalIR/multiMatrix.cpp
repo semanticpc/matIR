@@ -67,15 +67,11 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         int i =0;
         int query = it->first;
         Qrels qrels = it->second;
-        PrefSimulation utility_scores(qrels, vector<Qrels>());
-
 
 
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
-        double srecallSum_query = 0, andcgSum_query = 0, erriaSum_query = 0;
         int numOfProfiles = 0;
-        vector<Qrels> new_qrels_vector;
         for(iter=profiles.begin();iter!=profiles.end();iter++){
 
             Qrels new_qrels;
@@ -87,10 +83,8 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
 
             if(arma::sum(new_qrels.subtopicImportance) <= 0)
                 continue;
-            new_qrels_vector.push_back(new_qrels);
 
             PrefSimulation utility_scores(new_qrels, vector<Qrels>(), 0, 0);
-
             for(int run_index=0;run_index<runFiles.size();run_index++){
                 arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, new_qrels, rank);
                 cout << query;
@@ -108,6 +102,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                 arma::vec erriaScore = erria(run_matrix, new_qrels, rank);
                 cout << "," << erriaScore(4) << "," << erriaScore(9) << "," << erriaScore(19);
 
+
                 map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, new_qrels, rank, utility_scores);
                 map<string, arma::vec>::iterator prefScore_iter;
                 for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
@@ -115,6 +110,8 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                          << "," << prefScore_iter->second(19);
                 }
                 cout << endl;
+
+
             }
             numOfProfiles++;
         }
@@ -141,8 +138,6 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         int i =0;
         int query = it->first;
         Qrels qrels = it->second;
-        PrefSimulation utility_scores(qrels, vector<Qrels>());
-
 
 
         // Iterate user profiles

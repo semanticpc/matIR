@@ -65,13 +65,13 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-
+        cout << query;
 
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
-        double srecallSum_query = 0, andcgSum_query = 0, erriaSum_query = 0;
         int numOfProfiles = 0;
         vector<Qrels> new_qrels_vector;
+
         for(iter=profiles.begin();iter!=profiles.end();iter++){
 
             Qrels new_qrels;
@@ -97,12 +97,11 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
             cout << query;
             cout << "," << runFiles.at(run_index);
 
-            map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank,utility_scores);
+            map<string, arma::vec> prfScore = pref_measure(runs.at(run_index).find(query)->second, qrels, rank, utility_scores);
             map<string, arma::vec>::iterator prefScore_iter;
-            for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
+            for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ )
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                          << "," << prefScore_iter->second(19);
-            }
             cout << endl;
         }
     }
@@ -110,7 +109,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
 
 static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrels,
                                         map<int, map<int, Profiles* > > &profiles){
-    arma::vec prfScoreSum = arma::zeros(8);
+    arma::vec allScores = arma::zeros(24);
     double numOfQ = qrels.size();
     map<int, Qrels>::iterator it;
 
@@ -121,8 +120,9 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
         int query = it->first;
         Qrels qrels = it->second;
         int rank = 20;
-        cout << query << ",sysrun";
 
+        cout << query << ",sysrun";
+        int k = 0;
         // Iterate user profiles
         map<int, map<int, Profiles* > >::iterator iter;
         int numOfProfiles = 0;
@@ -150,11 +150,23 @@ static void printResults(map<int, vector<Document> > &run, map<int, Qrels> &qrel
 
         map<string, arma::vec> prfScore = pref_measure(run.find(query)->second, qrels, rank, utility_scores);
         map<string, arma::vec>::iterator prefScore_iter;
-        for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ )
+        for(prefScore_iter = prfScore.begin();prefScore_iter != prfScore.end(); prefScore_iter++ ){
                 cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                      << "," << prefScore_iter->second(19);
+
+                allScores(k++) += prefScore_iter->second(4);
+                allScores(k++) += prefScore_iter->second(9);
+                allScores(k++) += prefScore_iter->second(19);
+        }
         cout << endl;
+
     }
+    // Print the mean scores for all measures
+    cout << "all,sysrun";
+    for(int i =0; i< 24; i++ ){
+        cout << "," << allScores(i)/numOfQ;
+    }
+    cout << endl;
 }
 
 int main(int argc, char** argv) {

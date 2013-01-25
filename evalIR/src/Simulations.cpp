@@ -70,11 +70,11 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
             for(int i=0; i < (*it).matrix.n_rows; i++){
                 if(arma::sum((*it).matrix.row(i)) > 0){
                     utils.first(i) += 1;
-                    utils.second(i) += 2;
+                    //utils.second(i) += 2;
                 }
             }
             lvl_score += utils.first;
-            appearance_count += utils.second;
+            appearance_count += (utils.second+2);
         }
         lvl_score /= appearance_count;
     }else{

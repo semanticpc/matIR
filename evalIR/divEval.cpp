@@ -95,10 +95,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
                     cout << "," << prefScore_iter->second(4) << "," << prefScore_iter->second(9)
                          << "," << prefScore_iter->second(19);
             }
-            if(e > 0 || m > 0)
-                cout << "," << utility_scores.getTotalPairs() << "," << utility_scores.getTotalRelDocs() << endl;
-            else
-                cout << endl;
+            cout << endl;
         }
     }
 }
@@ -194,10 +191,8 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
                 allScores(i++) += prefScore_iter->second(9);
                 allScores(i++) += prefScore_iter->second(19);
         }
-        if(e > 0 || m > 0)
-            cout << "," << utility_scores.getTotalPairs() << "," << utility_scores.getTotalRelDocs() << endl;
-        else
-            cout << endl;
+
+        cout << endl;
 
     }
 
