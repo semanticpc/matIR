@@ -69,7 +69,7 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
             utils =get_simulation_scores(*it, rankedDocs);
             for(int i=0; i < (*it).matrix.n_rows; i++){
                 if(arma::sum((*it).matrix.row(i)) > 0){
-                    utils.first(i) += 1;
+                    //utils.first(i) += 1;
                     //utils.second(i) += 2;
                 }
             }
@@ -84,7 +84,7 @@ arma::vec PrefSimulation::simulate_level(vector<int> rankedDocs=vector<int>()){
         // Add one only to relevant documents
         for(int i=0; i < _qrels.matrix.n_rows; i++){
             if(appearance_count(i) > 0){
-                lvl_score(i) += 1;
+                //lvl_score(i) += 1;
             }
         }
         lvl_score /= (appearance_count+2);
