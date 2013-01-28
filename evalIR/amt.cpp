@@ -46,7 +46,7 @@ int getdir (string dir, vector<string> &files)
 }
 
 static void printResultsFolder(string runFolderPath, vector<string> runFiles, map<int, Qrels> qrels,
-        map<int, map<int, Profiles* > > &profiles){
+        map<int, map<int, Profiles* > > &profiles, int user, int triplet){
 
 
     // Iterate through the files and store the results in a vector
@@ -89,7 +89,7 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
 
 
         }
-        AMTSimulation utility_scores(qrels, new_qrels_vector);
+        AMTSimulation utility_scores(qrels, new_qrels_vector, user, triplet);
         for(int run_index=0;run_index<runFiles.size();run_index++){
 
             arma::mat run_matrix = judge_diversity(runs.at(run_index).find(query)->second, qrels, rank);
@@ -121,7 +121,8 @@ static void printResultsFolder(string runFolderPath, vector<string> runFiles, ma
 
 
 
-static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, map<int, map<int, Profiles* > > &profiles){
+static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels, map<int, map<int, Profiles* > > &profiles,
+        int user, int triplet){
 
 
     double numOfQ = qrels.size();
@@ -162,7 +163,7 @@ static void printResults(map<int, vector<Document> > run, map<int, Qrels> qrels,
 
 
         }
-        AMTSimulation utility_scores(qrels, new_qrels_vector);
+        AMTSimulation utility_scores(qrels, new_qrels_vector, user, triplet);
         cout << query << ",sysrun";
         // Get Subtopic-Recall Score
         arma::vec srecallScore = s_recall(run_matrix, qrels, rank);
@@ -220,7 +221,7 @@ int main(int argc, char** argv) {
     }
     string qrelsFile, runFile = "", runFolder;
     string profilesFile = "";
-    double error, missing;
+    int user, triplet;
     //int nextIndex = 3;
 
     for(int nextIndex= 1; nextIndex < argc; nextIndex++){
@@ -236,12 +237,12 @@ int main(int argc, char** argv) {
             runFile = argv[nextIndex + 1];
             nextIndex += 1;
         }
-        else if(strcmp(argv[nextIndex], "-e") == 0){
-            error = atof(argv[nextIndex + 1]);
+        else if(strcmp(argv[nextIndex], "-u") == 0){
+            user = atoi(argv[nextIndex + 1]);
             nextIndex += 1;
         }
-        else if(strcmp(argv[nextIndex], "-m") == 0 ){
-            missing = atof(argv[nextIndex + 1]);
+        else if(strcmp(argv[nextIndex], "-t") == 0 ){
+            triplet = atoi(argv[nextIndex + 1]);
             nextIndex += 1;
         }
         else if(strcmp(argv[nextIndex], "-p") == 0 ){
@@ -263,12 +264,12 @@ int main(int argc, char** argv) {
     if(runFolder == ""){
         map<int, map<int, Profiles* > > profiles = read_userProfiles(profilesFile);
         map<int, vector<Document> > run = readRunFile(runFile);
-        printResults(run, qrels, profiles);
+        printResults(run, qrels, profiles, user, triplet);
     }else{
         vector<string> runFiles;
         getdir(runFolder, runFiles);
         map<int, map<int, Profiles* > > profiles = read_userProfiles(profilesFile);
-        printResultsFolder(runFolder, runFiles, qrels, profiles);
+        printResultsFolder(runFolder, runFiles, qrels, profiles, user, triplet);
     }
     return 0;
 }

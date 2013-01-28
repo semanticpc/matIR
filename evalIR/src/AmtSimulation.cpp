@@ -9,25 +9,25 @@
 #include <algorithm>    // std::random_shuffle
 
 
-AMTSimulation::AMTSimulation(Qrels& qrels)
+AMTSimulation::AMTSimulation(Qrels& qrels,int user, int triplet)
     :
     _qrels(qrels),
     _qrels_vector(vector<Qrels>()){
     _error_pairs = 0;
     _total_pairs = 0;
     srand ( time(NULL) );
-    simulateScores();
+    simulateScores(user, triplet);
 
 }
 
-AMTSimulation::AMTSimulation(Qrels& qrels, vector<Qrels> qrels_vector)
+AMTSimulation::AMTSimulation(Qrels& qrels, vector<Qrels> qrels_vector,int user, int triplet)
     :
     _qrels(qrels),
     _qrels_vector(qrels_vector){
     _error_pairs = 0;
     _total_pairs = 0;
     srand ( time(NULL) );
-    simulateScores();
+    simulateScores(user, triplet);
 
 }
 
@@ -58,14 +58,14 @@ int AMTSimulation::get_preference(arma::rowvec vectorA, arma::rowvec vectorB, ar
 
 
 }
-map<Triplet, int, triplet_comparison> AMTSimulation::sampleTriplets(vector<int> rand_numbers){
+map<Triplet, int, triplet_comparison> AMTSimulation::sampleTriplets(vector<int> rand_numbers,int triplet){
     map<Triplet, int, triplet_comparison> triplets;
 
 
     int maxIndex = allDocs.size();
     int _random_number = -1;
 
-    for(int i=0; i < 1000; i++){
+    for(int i=0; i < triplet; i++){
         std::random_shuffle ( rand_numbers.begin(), rand_numbers.end() );
         Triplet t;
         t.leftDoc = rand_numbers.at(0);
@@ -135,7 +135,7 @@ bool AMTSimulation::checkPairs(map<Triplet, int, triplet_comparison> &seen_pairs
 
 
 
-void AMTSimulation::simulateScores(){
+void AMTSimulation::simulateScores(int user, int triplet){
 
 
     // Gather all documents into a set
@@ -194,11 +194,14 @@ void AMTSimulation::simulateScores(){
     // Simulate the preferences for only these 1000 triplets randomly
 
     vector<Qrels>::iterator qrels_iterator = _qrels_vector.begin();
-    for(; qrels_iterator != _qrels_vector.end(); qrels_iterator++){
-        Qrels currentQrels = *qrels_iterator;
+
+    for(int users=0;users < user; users++){
+        std::random_shuffle ( _qrels_vector.begin(), _qrels_vector.end() );
+
+        Qrels currentQrels = _qrels_vector.at(0);
 
         // Generate triplets and sample 1000 triplets randomly
-        map<Triplet, int, triplet_comparison> triplets = sampleTriplets(rand_numbers);
+        map<Triplet, int, triplet_comparison> triplets = sampleTriplets(rand_numbers, triplet);
         map<Triplet, int, triplet_comparison>::iterator triplet_iterator = triplets.begin();
         map<Triplet, int, triplet_comparison> seen_pairs;
 

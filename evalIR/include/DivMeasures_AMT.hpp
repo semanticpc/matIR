@@ -446,11 +446,6 @@ static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels, 
     return res;
 }
 
-static map<string, arma::vec> pref_measure(vector<Document>& run, Qrels& qrels,
-        int rank, vector<Qrels> qrel_vector=vector<Qrels>()){
-    AMTSimulation utility_scores(qrels, qrel_vector);
-    return pref_measure(run,qrels,rank,utility_scores);
-}
 
 
 

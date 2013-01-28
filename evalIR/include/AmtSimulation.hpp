@@ -42,8 +42,8 @@ private:
 
 private:
     int get_preference(arma::rowvec vectorA, arma::rowvec vectorB, arma::rowvec seen);
-    void simulateScores();
-    map<Triplet, int, triplet_comparison> sampleTriplets(vector<int> );
+    void simulateScores(int user, int triplet);
+    map<Triplet, int, triplet_comparison> sampleTriplets(vector<int>, int );
 
     void updateScores(int topDoc, int leftDoc, int rightDoc, bool preferLeft);
     bool checkPairs(map<Triplet, int, triplet_comparison> &seen_pairs,
@@ -59,8 +59,8 @@ public:
     int getTotalRelDocs();
     int getTotalPairs();
 
-    AMTSimulation(Qrels& qrels);
-    AMTSimulation(Qrels& qrels, vector<Qrels> qrels_vector);
+    AMTSimulation(Qrels& qrels,int user, int triplet);
+    AMTSimulation(Qrels& qrels, vector<Qrels> qrels_vector,int user, int triplet);
 
 };
 #endif	/* SIMULATIONS_HPP */
