@@ -251,7 +251,7 @@ void AMTSimulation::simulateScores(){
                 relevantDocIndices.insert(triplet.rightDoc);
 
         }
-        map<string, arma::vec>::iterator codes = _utilScores.begin();
+        /*map<string, arma::vec>::iterator codes = _utilScores.begin();
         for(;codes!= _utilScores.end(); codes++){
             set<int>::iterator relevantDocIterator = relevantDocIndices.begin();
 
@@ -263,7 +263,7 @@ void AMTSimulation::simulateScores(){
                     _utilScores[(*codes).first](*relevantDocIterator) += 1;
             }
             _appearanceCounts[(*codes).first] += 2;
-        }
+        }*/
 
     }
 
