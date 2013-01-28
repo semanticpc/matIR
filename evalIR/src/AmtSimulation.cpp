@@ -160,7 +160,18 @@ void AMTSimulation::simulateScores(){
     _utilScores[""] = arma::zeros(_qrels.relDocs.size());
     _appearanceCounts[""] = arma::zeros(_qrels.relDocs.size());
 
-
+    if( _qrels.relDocs.size() < 3){
+        int numOfSubtopics = int(*_qrels.subtopics.rbegin());
+        arma::rowvec seen = arma::zeros<arma::rowvec>(numOfSubtopics);
+        if(get_preference(_qrels.matrix.row(rand_numbers.at(0)), _qrels.matrix.row(rand_numbers.at(1)), seen)){
+            _utilScores[""](0) += 1;
+        }else
+            _utilScores[""](1) += 1;
+        _appearanceCounts[""](0) += 1;
+        _appearanceCounts[""](1) += 1;
+        _utilScores[""] /= _appearanceCounts[""];
+        return;
+    }
 
     // Simulate the preferences for only these 1000 triplets randomly
 
