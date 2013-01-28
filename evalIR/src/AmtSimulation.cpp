@@ -151,23 +151,23 @@ void AMTSimulation::simulateScores(){
         string code; ostringstream convert;
         convert << index;
         code = convert.str();
-        _utilScores[code] = arma::zeros(_qrels.relDocs.size() + _qrels.nonRelDocs.size());
-        _appearanceCounts[code] = arma::zeros(_qrels.relDocs.size() + _qrels.nonRelDocs.size());
+        _utilScores[code] = arma::zeros(_qrels.relDocs.size());
+        _appearanceCounts[code] = arma::zeros(_qrels.relDocs.size());
 
         index++;
     }
     set<Document>::iterator itnonrel = _qrels.nonRelDocs.begin();
     for(;itnonrel != _qrels.nonRelDocs.end(); itnonrel++){
-        allDocs.push_back((*itnonrel));
+        //allDocs.push_back((*itnonrel));
         rand_numbers.push_back(index);
-        doc_index_map.insert(make_pair((*itnonrel), index));
+        //doc_index_map.insert(make_pair((*itnonrel), index));
 
         // Initialize
         string code; ostringstream convert;
         convert << index;
         code = convert.str();
-        _utilScores[code] = arma::zeros(_qrels.relDocs.size() + _qrels.nonRelDocs.size());
-        _appearanceCounts[code] = arma::zeros(_qrels.relDocs.size() + _qrels.nonRelDocs.size());
+        _utilScores[code] = arma::zeros(_qrels.relDocs.size() );
+        _appearanceCounts[code] = arma::zeros(_qrels.relDocs.size());
 
         index++;
     }
@@ -212,11 +212,11 @@ void AMTSimulation::simulateScores(){
 
 
 
-            if(arma::sum(currentQrels.matrix.row(triplet.topDoc)) <= 0 || triplet.topDoc >  currentQrels.matrix.n_rows )
+            if(arma::sum(currentQrels.matrix.row(triplet.topDoc)) <= 0 || triplet.topDoc >=  currentQrels.matrix.n_rows )
                 triplet.topDoc = -1;
-            if(arma::sum(currentQrels.matrix.row(triplet.leftDoc)) <= 0 || triplet.leftDoc >  currentQrels.matrix.n_rows)
+            if(arma::sum(currentQrels.matrix.row(triplet.leftDoc)) <= 0 || triplet.leftDoc >=  currentQrels.matrix.n_rows)
                     triplet.leftDoc = -1;
-            if(arma::sum(currentQrels.matrix.row(triplet.rightDoc)) <= 0 || triplet.rightDoc >  currentQrels.matrix.n_rows)
+            if(arma::sum(currentQrels.matrix.row(triplet.rightDoc)) <= 0 || triplet.rightDoc >=  currentQrels.matrix.n_rows)
                     triplet.rightDoc = -1;
 
 
